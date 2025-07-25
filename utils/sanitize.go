@@ -18,6 +18,12 @@ func Sanitize(s string) string {
 	if len(s) > 60 {
 		s = s[:60]
 	}
+
+	banned := []string{"document", "file", "note", "notes", "txt"}
+	for _, b := range banned {
+		s = strings.TrimSuffix(s, "-"+b)
+		s = strings.TrimSuffix(s, "_"+b)
+	}
 	return s
 }
 
