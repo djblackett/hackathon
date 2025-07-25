@@ -20,7 +20,9 @@ func NewOpenAIClient(key, model string) *OpenAIClient {
 
 func (o *OpenAIClient) SuggestFilename(content string) (string, error) {
 	resp, err := o.cl.CreateChatCompletion(context.Background(), openai.ChatCompletionRequest{
-		Model: o.model,
+		Model:       openai.GPT3Dot5Turbo0125,
+		MaxTokens:   32,
+		Temperature: 0.25,
 		Messages: []openai.ChatCompletionMessage{
 			{Role: "system", Content: "You are a file recovery assistant."},
 			{Role: "user", Content: buildPrompt(content)},

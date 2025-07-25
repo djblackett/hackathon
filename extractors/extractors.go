@@ -23,7 +23,7 @@ func Walk(dir string, types map[string]struct{}, fn func(string, string) error) 
 		}
 		ext := strings.TrimPrefix(strings.ToLower(filepath.Ext(path)), ".")
 		if _, ok := types[ext]; !ok {
-			return nil // skip
+			return nil // skip unsupported filetypes
 		}
 		for _, ex := range registered {
 			if ex.CanHandle(path) {

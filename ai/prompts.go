@@ -12,7 +12,7 @@ Here is the document:
 """
 
 Generate a single, meaningful filename that summarizes this file.
-• 5–10 words
+• 5-10 words
 • lowercase letters, numbers, dashes or underscores
 • no file extension
 Respond with the filename only.`, content)
