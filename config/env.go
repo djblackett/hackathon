@@ -1,7 +1,6 @@
 package config
 
 import (
-	"fmt"
 	"os"
 )
 
@@ -14,7 +13,6 @@ type Config struct {
 func FromEnv() Config {
 
 	openAIKey := os.Getenv("OPENAI_API_KEY")
-	fmt.Println("OpenAI Key:", openAIKey)
 	return Config{
 		OpenAIKey: openAIKey,
 		// OllaHost:  os.Getenv("OLLAMA_HOST"), // optional
