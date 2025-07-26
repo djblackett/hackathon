@@ -20,7 +20,7 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 	cfg := config.FromEnv()
-	var defaultFileTypes = []string{ /*"txt", "md", */ "pdf"}
+	var defaultFileTypes = []string{ "txt", "md", "log", "cfg", "ini", "pdf"}
 	app := &cli.App{
 		Name:  "ai-file-renamer",
 		Usage: "rename recovered docs via AI",
