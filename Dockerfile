@@ -29,4 +29,5 @@ COPY --from=deps /lib /lib/
 # Copy the Go binary
 COPY --from=builder /app/filename-fixer /usr/local/bin/filename-fixer
 
-ENTRYPOINT ["filename-fixer"]
+# ENTRYPOINT ["filename-fixer"]
+ENTRYPOINT ["/bin/sh"]

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"log"
 	"os"
 	"sync"
@@ -15,101 +16,147 @@ import (
 )
 
 func main() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
+	// 1. Load environment variables from .env (useful during local dev).
+	if err := godotenv.Load(); err != nil {
+		log.Fatalf("Error loading .env file: %v", err)
 	}
+
+	// 2. Build a typed config object that holds OpenAI/Ollama creds, etc.
 	cfg := config.FromEnv()
-	var defaultFileTypes = []string{ "txt", "md", "log", "cfg", "ini", "pdf"}
+
+	// Reasonable default extensions; can be overridden with --types "csv,html,…".
+	defaultFileTypes := []string{"txt", "md", "log", "cfg", "ini", "pdf", "json"}
+
+	// 3. Define CLI application.
 	app := &cli.App{
 		Name:  "ai-file-renamer",
 		Usage: "rename recovered docs via AI",
 		Flags: []cli.Flag{
-			&cli.StringFlag{Name: "dir", Required: true, Usage: "directory to scan"},
-			&cli.BoolFlag{Name: "local", Usage: "use local Ollama LLM"},
-			&cli.StringFlag{Name: "model", Value: "mistral", Usage: "model name (ollama or openai)"},
-			&cli.BoolFlag{Name: "dry-run", Usage: "preview changes only"},
-			&cli.BoolFlag{Name: "copy", Value: true, Usage: "copy files to output directory instead of renaming originals"},
-			&cli.StringSliceFlag{Name: "types", Value: cli.NewStringSlice(defaultFileTypes...)},
+			&cli.StringFlag{ // where to start scanning; required.
+				Name:     "dir",
+				Required: true,
+				Usage:    "directory to scan",
+			},
+			&cli.BoolFlag{ // switch between OpenAI API and local Ollama.
+				Name:  "local",
+				Usage: "use local Ollama LLM",
+			},
+			&cli.StringFlag{ // e.g. "mistral", "gpt-4o".
+				Name:  "model",
+				Value: "mistral",
+				Usage: "model name (ollama or openai)",
+			},
+			&cli.BoolFlag{ // dry‑run means log only.
+				Name:  "dry-run",
+				Usage: "preview changes only",
+			},
+			&cli.BoolFlag{ // copy instead of rename; safer default (true).
+				Name:  "copy",
+				Value: true,
+				Usage: "copy files to output directory instead of renaming originals",
+			},
+			&cli.BoolFlag{
+				Name:  "debug",
+				Usage: "return all errors joined together",
+			},
+			&cli.StringSliceFlag{ // allowed extensions.
+				Name:  "types",
+				Value: cli.NewStringSlice(defaultFileTypes...),
+			},
 		},
 		Action: func(c *cli.Context) error {
+			// Harvest flag values.
 			dir := c.String("dir")
 			local := c.Bool("local")
 			model := c.String("model")
 			dry := c.Bool("dry-run")
-			copy := c.Bool("copy")
-			types := map[string]struct{}{}
+			copyMode := c.Bool("copy")
+			debug := c.Bool("debug")
+
+			// Build a set[string]struct{} for O(1) membership tests during walk.
+			types := make(map[string]struct{})
 			for _, t := range c.StringSlice("types") {
 				types[t] = struct{}{}
 			}
 
+			// 4. Spin up LLM client once; reused by all goroutines.
 			client, err := ai.NewClient(cfg, local, model)
 			if err != nil {
 				return err
 			}
 
+			// Concurrency helpers.
 			var wg sync.WaitGroup
-			var walkErr error
-			var mu sync.Mutex
+			errChan := make(chan error, 100) // buffered to avoid blocking goroutines.
 
-			errChan := make(chan error, 100)
-
-			processFile := func(path string, content string) {
+			// processFile runs in its own goroutine per file.
+			processFile := func(path, content string) {
 				defer wg.Done()
+
+				// 5a. Ask the model for a descriptive filename.
 				suggested, err := client.SuggestFilename(content)
 				if err != nil {
 					errChan <- err
 					return
 				}
-				sanitizedFilename := utils.Sanitize(suggested)
 
-				if dry {
-					if copy {
-						// Use a fixed output directory relative to the project root
-						outputDir := "files/output"
-						log.Printf("[DRY] %s  →  %s/%s\n", path, outputDir, sanitizedFilename)
-					} else {
-						log.Printf("[DRY] %s  →  %s\n", path, sanitizedFilename)
-					}
-					return
-				}
+				// Sanitize to avoid invalid characters.
+				sanitized := utils.Sanitize(suggested)
 
-				if copy {
-					// Copy file to output directory
-					outputDir := "files/output"
-					if err := utils.CopyFile(path, outputDir, sanitizedFilename); err != nil {
+				// 5b. Depending on flags, perform or log the operation.
+				switch {
+				case dry && copyMode:
+					log.Printf("[DRY] %s  →  files/output/%s\n", path, sanitized)
+				case dry && !copyMode:
+					log.Printf("[DRY] %s  →  %s\n", path, sanitized)
+				case copyMode:
+					if err := utils.CopyFile(path, "files/output", sanitized); err != nil {
 						errChan <- err
 					}
-				} else {
-					// Rename file in place
-					if err := utils.RenameFile(path, sanitizedFilename); err != nil {
+				default: // rename in place
+					if err := utils.RenameFile(path, sanitized); err != nil {
 						errChan <- err
 					}
 				}
 			}
 
-			err = extractors.Walk(dir, types, func(path string, content string) error {
+			// 6. Walk the directory tree and dispatch work.
+			if err := extractors.Walk(dir, types, func(path, content string) error {
 				wg.Add(1)
 				go processFile(path, content)
-				return nil
-			})
-			if err != nil {
+				return nil // continue walking
+			}); err != nil {
 				return err
 			}
 
+			// Wait for all processing to complete, then close channel so range terminates.
 			wg.Wait()
 			close(errChan)
+
+			var (
+				firstErr error   // keeps behaviour for non‑debug
+				allErrs  []error // collects when debug
+			)
+
 			for e := range errChan {
-				mu.Lock()
-				if walkErr == nil {
-					walkErr = e
+				if firstErr == nil {
+					firstErr = e
 				}
-				mu.Unlock()
+				if debug {
+					allErrs = append(allErrs, e)
+				}
 			}
-			return walkErr
+
+			switch {
+			case debug && len(allErrs) > 0:
+				return errors.Join(allErrs...)
+			default:
+				return firstErr
+			}
 		},
 	}
 
+	// Kick everything off.
 	if err := app.Run(os.Args); err != nil {
 		log.Fatal(err)
 	}

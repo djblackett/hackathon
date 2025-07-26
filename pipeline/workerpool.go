@@ -80,7 +80,7 @@ func ProcessFiles(dir string, N, M int, dryRun bool, aiClient ai.Client, extract
 		close(resultsCh)
 	}()
 
-	// 6. consumer – rename or dry‑run
+	// 6. consumer - rename or dry‑run
 	for job := range resultsCh {
 		if dryRun {
 			log.Printf("[DRY] %s → %s\n", job.Path, job.Filename)

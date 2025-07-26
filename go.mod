@@ -9,7 +9,13 @@ require (
 )
 
 require (
+	github.com/andybalholm/cascadia v1.3.3 // indirect
+	golang.org/x/net v0.39.0 // indirect
+)
+
+require (
 	github.com/Masterminds/semver/v3 v3.2.1 // indirect
+	github.com/PuerkitoBio/goquery v1.10.3
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/heussd/pdftotext-go v0.0.0-20240804143356-fe57a0d73567 // indirect
 	github.com/ledongthuc/pdf v0.0.0-20250511090121-5959a4027728 // indirect
