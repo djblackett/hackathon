@@ -9,10 +9,10 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/urfave/cli/v2"
 
-	"github.com/djblackett/bootdev-hackathon/ai"
-	"github.com/djblackett/bootdev-hackathon/config"
-	"github.com/djblackett/bootdev-hackathon/extractors"
-	"github.com/djblackett/bootdev-hackathon/utils"
+	"github.com/djblackett/bootdev-hackathon/internal/ai"
+	"github.com/djblackett/bootdev-hackathon/internal/config"
+	"github.com/djblackett/bootdev-hackathon/internal/extractors"
+	"github.com/djblackett/bootdev-hackathon/internal/utils"
 )
 
 func main() {

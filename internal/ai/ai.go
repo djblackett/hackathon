@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/djblackett/bootdev-hackathon/config"
+	"github.com/djblackett/bootdev-hackathon/internal/config"
 )
 
 type Client interface {
