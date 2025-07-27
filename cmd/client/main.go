@@ -17,16 +17,16 @@ import (
 )
 
 func main() {
-	// 1. Load environment variables from .env (useful during local dev).
+	// Load environment variables from .env (useful during local dev).
 	_ = godotenv.Load() // Ignore errors if .env is not present - for docker
 
-	// 2. Build a typed config object that holds OpenAI/Ollama creds, etc.
+	// Build a typed config object that holds OpenAI/Ollama creds, etc.
 	cfg := config.FromEnv()
 
 	// Reasonable default extensions; can be overridden with --types "csv,html,…".
 	defaultFileTypes := []string{"txt", "md", "log", "cfg", "ini", "pdf", "json"}
 
-	// 3. Define CLI application.
+	// Define CLI application.
 	app := &cli.App{
 		Name:  "ai-file-renamer",
 		Usage: "rename recovered docs via AI",
@@ -42,7 +42,6 @@ func main() {
 			},
 			&cli.StringFlag{ // e.g. "mistral", "gpt-4o".
 				Name:  "model",
-				Value: "mistral",
 				Usage: "model name (ollama or openai)",
 			},
 			&cli.BoolFlag{ // dry‑run means log only.
@@ -84,8 +83,16 @@ func main() {
 				types[t] = struct{}{}
 			}
 
-			// 4. Spin up LLM client once; reused by all goroutines.
-			client, err := ai.NewClient(cfg, local, model)
+			defaultModel := model
+			// set different default models based on local flag.
+			if model == "" && local {
+				defaultModel = "mistral"
+			} else if model == "" && !local {
+				defaultModel = "gpt-3.5-turbo"
+			}
+
+			// Spin up LLM client once; reused by all goroutines.
+			client, err := ai.NewClient(cfg, local, defaultModel)
 			if err != nil {
 				return err
 			}
@@ -98,7 +105,7 @@ func main() {
 			processFile := func(path, content string) {
 				defer wg.Done()
 
-				// 5a. Ask the model for a descriptive filename.
+				// Ask the model for a descriptive filename.
 				suggested, err := client.SuggestFilename(content)
 				if err != nil {
 					errChan <- err
@@ -110,7 +117,7 @@ func main() {
 
 				ext := filepath.Ext(path)
 
-				// 5b. Depending on flags, perform or log the operation.
+				// Depending on flags, perform or log the operation.
 				switch {
 				case dry && copyMode:
 					log.Printf("[DRY] %s  →  files/output/%s\n", path, sanitized+ext)
@@ -127,7 +134,7 @@ func main() {
 				}
 			}
 
-			// 6. Walk the directory tree and dispatch work.
+			// Walk the directory tree and dispatch work.
 			if err := extractors.Walk(dir, types, func(path, content string) error {
 				wg.Add(1)
 				go processFile(path, content)

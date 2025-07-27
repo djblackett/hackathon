@@ -21,9 +21,10 @@ func NewClient(cfg config.Config, local bool, model string) (Client, error) {
 		fmt.Println("Using local Ollama client with model:", model)
 		return NewOllamaClient(model), nil
 	case apiKey != "":
-		fmt.Println("Using OpenAI client with web API")
+		fmt.Println("Using OpenAI client with web API - no relay server")
 		return NewOpenAIClient(apiKey, model), nil
 	case cfg.ServerURL != "": // new: check if server URL is configured
+		fmt.Println("Using HTTP client with remote server URL:", cfg.ServerURL)
 		return NewHTTPClient(cfg.ServerURL, model), nil
 	}
 	return nil, errors.New("no AI backend configured")

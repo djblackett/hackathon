@@ -25,7 +25,7 @@ func Walk(dir string, types map[string]struct{}, fn func(string, string) error) 
 		}
 
 		ext := strings.TrimPrefix(strings.ToLower(filepath.Ext(path)), ".")
-		fmt.Printf("Processing file: %s, extension: %s\n", path, ext) // Add this debug line
+		// fmt.Printf("Processing file: %s, extension: %s\n", path, ext) // Add this debug line
 		if _, ok := types[ext]; !ok {
 			return nil // skip unsupported filetypes
 		}

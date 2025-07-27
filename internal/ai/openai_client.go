@@ -38,7 +38,7 @@ TEXT:
 """`, content)
 
 	step1, err := o.cl.CreateChatCompletion(context.Background(), openai.ChatCompletionRequest{
-		Model:       openai.GPT3Dot5Turbo0125,
+		Model:       o.model,
 		MaxTokens:   32,
 		Temperature: 0.2,
 		Messages: []openai.ChatCompletionMessage{
