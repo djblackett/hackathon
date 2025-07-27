@@ -68,7 +68,7 @@ TEXT:
 		builder = builder + " " + r.Year
 	}
 
-	formatPrompt := fmt.Sprintf(`Create a single filename (5–10 words) from: %q
+	formatPrompt := fmt.Sprintf(`Create a single filename (5-10 words) from: %q
 Format: lowercase, words separated by dashes, no extension, no generic words like "document" or "file".
 Respond with the filename only.`, builder)
 

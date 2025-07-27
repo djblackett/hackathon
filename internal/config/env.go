@@ -6,8 +6,9 @@ import (
 
 type Config struct {
 	OpenAIKey string
-	// OllaHost  string
-	// Model     string
+	ServerURL string
+	OllaHost  string
+	Model     string
 }
 
 func FromEnv() Config {
@@ -15,7 +16,8 @@ func FromEnv() Config {
 	openAIKey := os.Getenv("OPENAI_API_KEY")
 	return Config{
 		OpenAIKey: openAIKey,
-		// OllaHost:  os.Getenv("OLLAMA_HOST"), // optional
-		// Model:     os.Getenv("MODEL"),       // can be empty; CLI flag wins
+		OllaHost:  os.Getenv("OLLAMA_HOST"),
+		Model:     os.Getenv("MODEL"),
+		ServerURL: os.Getenv("AI_SERVER_URL"),
 	}
 }

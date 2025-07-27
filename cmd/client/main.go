@@ -17,9 +17,7 @@ import (
 
 func main() {
 	// 1. Load environment variables from .env (useful during local dev).
-	if err := godotenv.Load(); err != nil {
-		log.Fatalf("Error loading .env file: %v", err)
-	}
+	_ = godotenv.Load() // Ignore errors if .env is not present - for docker
 
 	// 2. Build a typed config object that holds OpenAI/Ollama creds, etc.
 	cfg := config.FromEnv()
