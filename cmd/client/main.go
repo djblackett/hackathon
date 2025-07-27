@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log"
 	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/joho/godotenv"
@@ -57,6 +58,11 @@ func main() {
 				Name:  "debug",
 				Usage: "return all errors joined together",
 			},
+			&cli.BoolFlag{
+				Name:  "flatten",
+				Value: false,
+				Usage: "flatten output directory structure",
+			},
 			&cli.StringSliceFlag{ // allowed extensions.
 				Name:  "types",
 				Value: cli.NewStringSlice(defaultFileTypes...),
@@ -101,18 +107,20 @@ func main() {
 				// Sanitize to avoid invalid characters.
 				sanitized := utils.Sanitize(suggested)
 
+				ext := filepath.Ext(path)
+
 				// 5b. Depending on flags, perform or log the operation.
 				switch {
 				case dry && copyMode:
-					log.Printf("[DRY] %s  →  files/output/%s\n", path, sanitized)
+					log.Printf("[DRY] %s  →  files/output/%s\n", path, sanitized+ext)
 				case dry && !copyMode:
-					log.Printf("[DRY] %s  →  %s\n", path, sanitized)
+					log.Printf("[DRY] %s  →  %s\n", path, sanitized+ext)
 				case copyMode:
-					if err := utils.CopyFile(path, "files/output", sanitized); err != nil {
+					if err := utils.CopyFile(dir, path, "files/output", sanitized); err != nil {
 						errChan <- err
 					}
 				default: // rename in place
-					if err := utils.RenameFile(path, sanitized); err != nil {
+					if err := utils.RenameFile(dir, path, sanitized); err != nil {
 						errChan <- err
 					}
 				}

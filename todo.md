@@ -5,6 +5,6 @@
 - copy - non-destructive run option (default)
 -
 
-- add file extension back to new filename
-- make sure subdirectories map to the same in the output - make sure it isn't just flat
+- add file extension back to new filename - done
+- make sure subdirectories map to the same in the output - make sure it isn't just flat - done
 - maybe add an option to keep filesystem structure or flatten
