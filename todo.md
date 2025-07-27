@@ -7,4 +7,11 @@
 
 - add file extension back to new filename - done
 - make sure subdirectories map to the same in the output - make sure it isn't just flat - done
-- maybe add an option to keep filesystem structure or flatten
+- maybe add an option to keep filesystem structure or flatten - done
+
+- add pass ai_model var to openAI client
+- have different defaults for ai_model depending on whether --local is set
+-
+
+- find alternative to jq if I don't have time to implement tessarect or other external cmds (will make installation easier)
+- or find way to make Docker container in and out directories intuitive to use. Then it won't matter.
