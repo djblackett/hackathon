@@ -76,6 +76,7 @@ func main() {
 			dry := c.Bool("dry-run")
 			copyMode := c.Bool("copy")
 			debug := c.Bool("debug")
+			flatten := c.Bool("flatten")
 
 			// Build a set[string]struct{} for O(1) membership tests during walk.
 			types := make(map[string]struct{})
@@ -116,7 +117,7 @@ func main() {
 				case dry && !copyMode:
 					log.Printf("[DRY] %s  →  %s\n", path, sanitized+ext)
 				case copyMode:
-					if err := utils.CopyFile(dir, path, "files/output", sanitized); err != nil {
+					if err := utils.CopyFile(dir, path, "files/output", sanitized, flatten); err != nil {
 						errChan <- err
 					}
 				default: // rename in place

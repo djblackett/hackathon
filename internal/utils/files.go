@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -14,7 +13,7 @@ func RenameFile(baseDir, oldPath, newName string) error {
 	return os.Rename(oldPath, newPath)
 }
 
-func CopyFile(baseDir, srcPath, destDir, newName string) error {
+func CopyFile(baseDir, srcPath, destDir, newName string, flatten bool) error {
 	// Create destination directory if it doesn't exist
 	if err := os.MkdirAll(destDir, 0755); err != nil {
 		return err
@@ -29,7 +28,23 @@ func CopyFile(baseDir, srcPath, destDir, newName string) error {
 
 	// Create destination file
 	ext := filepath.Ext(srcPath)
-	fmt.Println("Src path:", srcPath, "Dest dir:", destDir, "New name:", newName, "Ext:", ext)
+
+	// If flattening, use the new name directly in the destination directory.
+	if flatten {
+
+		destPath := filepath.Join(destDir, newName+ext)
+		dest, err := os.Create(destPath)
+		if err != nil {
+			return err
+		}
+		defer dest.Close()
+
+		// Copy file contents
+		_, err = io.Copy(dest, src)
+		return err
+	}
+
+	// If not flattening, preserve the directory structure.
 	relPath, err := filepath.Rel(baseDir, srcPath)
 	if err != nil {
 		return err
