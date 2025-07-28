@@ -1,9 +1,10 @@
 # AI File Renamer
 
-AI File Renamer is a CLI tool for automatically renaming files based on their content using AI. It supports three backends: direct OpenAI API, local Ollama, or a remote Fly.io server.
+AI File Renamer is a CLI tool for automatically renaming files based on their content using AI. Inspired by a real life need, the primary usecase is for poorly named files and especially files recovered from a broken filesystem. It supports three backends: direct OpenAI API, local Ollama, or a remote Fly.io server.
 
 ## 📑 Table of Contents
 
+- [🏆 Boot.Dev Hackathon](#bootdev-hackathon)
 - [🏗️ Architecture](#️-architecture)
 - [✨ Features](#-features)
 - [🚀 Quick Start](#-quick-start)
@@ -18,6 +19,36 @@ AI File Renamer is a CLI tool for automatically renaming files based on their co
 - [🙏 Acknowledgments](#-acknowledgments)
 
 ---
+
+## Boot.Dev Hackathon
+
+I completed this project for the [Boot.Dev](https://www.boot.dev/) July 2025 Hackathon.
+
+### LLM Usage
+
+This project was developed with AI assistance to accelerate development. While the initial Go code structure was generated using ChatGPT, the codebase has undergone significant evolution through iterative development, debugging, and feature expansion. Having completed all Go courses and projects on Boot.Dev, I approached this as coding efficiently rather than "vibe coding". I can explain and maintain all components of the codebase.
+
+**Note**: AI tools proved less effective for DevOps configurations, with approximately 25% of responses being directly usable. Manual expertise was essential for the deployment and infrastructure components.
+
+### Project Reflections
+
+Initially, I envisioned a simple CLI tool to solve a personal problem: renaming poorly named files recovered from a damaged filesystem. What started as a basic file renamer evolved into a comprehensive solution with multiple AI backends, robust DevOps configurations, and production-ready deployment options.
+
+**Key learnings from this hackathon:**
+
+One unexpected discovery was that scope creep can actually be beneficial. Adding the server API and multiple deployment options transformed what could have been a simple utility into a versatile platform. The original use case of filesystem recovery naturally led to features like smart filtering and concurrent processing that make the tool more robust overall.
+
+I also learned that investing time in proper infrastructure really pays off. The Docker, Kubernetes, and CI/CD configurations took significant effort but made the project feel more professional and maintainable. Privacy considerations became increasingly important as I worked with the tool. The local Ollama option addresses real concerns about sending sensitive file content to external APIs.
+
+**Challenges and trade-offs:**
+
+The main limitation as the deadline approached was file type support. While the plugin-based extractor system is designed for easy extensibility, I prioritized building a solid foundation over breadth of formats. The current implementation handles common text-based files well, but expanding to office documents and OCR for image-based PDFs (via Tesseract and Pandoc) remains on the roadmap.
+
+I may have over-engineered the DevOps infrastructure, but Lane's emphasis on making projects "as easy as possible to run" resonated strongly. The comprehensive deployment options, ranging from simple remote server usage to full Kubernetes deployments, demonstrate production-readiness while maintaining simplicity for end users.
+
+**Outcome:**
+
+The final result exceeded my initial expectations, providing a tool that's not only useful for my original problem but could serve a broader community of developers dealing with file organization challenges. The modular architecture and multiple AI backend options create a foundation for future enhancements and community contributions.
 
 ## 🏗️ Architecture
 
