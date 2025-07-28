@@ -91,14 +91,14 @@ docker exec -it ollama ollama pull mistral
 
 ```bash
 # Preview mode with local AI
-go run ./cmd/client/main.go --dir ./files/input --local --model mistral --dry-run
+go run ./cmd/client/main.go --input ./files/input --local --model mistral --dry-run
 
 # Actual renaming with OpenAI
-go run ./cmd/client/main.go --dir ./files/input --model gpt-4o
+go run ./cmd/client/main.go --input ./files/input --model gpt-3.5-turbo
 
 # Build and run
 go build -o ai-renamer ./cmd/client/
-./ai-renamer --dir ./documents --dry-run
+./ai-renamer --input ./documents --dry-run
 ```
 
 ### 5. Deploy Server (Optional)
@@ -120,30 +120,35 @@ go run ./cmd/server/main.go
 
 ## 🔧 CLI Options
 
-| Flag | Short | Description | Default |
-|------|-------|-------------|---------|
-| `--dir` | `-d` | Directory to scan for files | *required* |
-| `--types` | `-t` | Comma-separated file extensions | `txt,md,log,cfg,ini,pdf,json` |
-| `--local` | `-l` | Use local Ollama instead of OpenAI | `false` |
-| `--model` | `-m` | AI model name | `gpt-4o` (OpenAI) / `mistral` (Ollama) |
-| `--dry-run` | `-n` | Preview changes without renaming | `false` |
-| `--workers` | `-w` | Number of concurrent workers | `3` |
-| `--server-url` | `-s` | Remote server URL for AI processing | - |
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--input` | Directory to scan for files | `files/input` (*required*) |
+| `--output` | Output directory for processed files | `files/output` |
+| `--types` | File extensions to process (comma-separated) | `txt,md,log,cfg,ini,pdf,json` |
+| `--local` | Use local Ollama instead of OpenAI | `false` |
+| `--model` | AI model name | `gpt-3.5-turbo` (OpenAI) / `mistral` (Ollama) |
+| `--dry-run` | Preview changes without processing | `false` |
+| `--copy` | Copy files to output directory instead of renaming | `true` |
+| `--debug` | Return all errors joined together | `false` |
+| `--flatten` | Flatten output directory structure | `false` |
 
 ### Examples
 
 ```bash
 # Basic usage with OpenAI
-./ai-renamer --dir ./documents
+./ai-renamer --input ./documents
 
 # Privacy mode with local AI
-./ai-renamer --dir ./sensitive-docs --local --model mistral
+./ai-renamer --input ./sensitive-docs --local --model mistral
 
 # Preview only, specific file types
-./ai-renamer --dir ./logs --types "log,txt" --dry-run
+./ai-renamer --input ./logs --types "log,txt" --dry-run
 
-# Use remote server
-./ai-renamer --dir ./files --server-url https://your-app.fly.dev
+# Copy to custom output directory with flattened structure
+./ai-renamer --input ./files --output ./renamed --flatten
+
+# Debug mode to see all errors
+./ai-renamer --input ./documents --debug
 ```
 
 ---
@@ -198,7 +203,7 @@ curl -X POST https://your-app.fly.dev/suggest-filename \
 When processing confidential documents, use local mode to keep all data on your machine:
 
 ```bash
-./ai-renamer --dir ./confidential --local --model mistral
+./ai-renamer --input ./confidential --local --model mistral
 ```
 
 This ensures no file content is sent to external APIs.
@@ -265,25 +270,10 @@ docker build -f Dockerfile -t ai-renamer-client .
 go run ./cmd/server/main.go
 
 # Run client
-go run ./cmd/client/main.go --dir ./files/input --dry-run
+go run ./cmd/client/main.go --input ./files/input --dry-run
 ```
 
 ---
-
-## 🧪 Testing
-
-```bash
-# Run tests
-go test ./...
-
-# Test with sample files
-go run ./cmd/client/main.go --dir ./files/input --dry-run
-
-# Test server API
-curl -X POST http://localhost:8080/suggest-filename \
-  -H "Content-Type: application/json" \
-  -d '{"content": "Sample content", "model": "gpt-4o"}'
-```
 
 ---
 
@@ -295,12 +285,13 @@ curl -X POST http://localhost:8080/suggest-filename \
 - [x] OpenAI integration
 - [x] Local Ollama support
 - [x] PDF content extraction
-- [x] OCR for scanned documents
 - [x] HTTP API server
 - [x] Fly.io deployment
+- [x] Kubernetes deployment config
 
 ### Planned Enhancements 🔄
 
+- [ ] OCR for scanned documents
 - [ ] Web UI frontend
 - [ ] Batch API endpoints
 - [ ] File deduplication
@@ -323,7 +314,7 @@ curl -X POST http://localhost:8080/suggest-filename \
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License
 
 ---
 
@@ -332,7 +323,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Built for the [Boot.dev](https://boot.dev) Hackathon ✨
 - Powered by [OpenAI](https://openai.com) and [Ollama](https://ollama.com)
 - OCR support via [Tesseract](https://github.com/tesseract-ocr/tesseract)
-
----
-
-*Need help? Open an issue or check the [documentation](https://github.com/djblackett/bootdev-hackathon/wiki).*

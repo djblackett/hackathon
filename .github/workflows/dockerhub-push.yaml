@@ -16,5 +16,5 @@ jobs:
 
       - name: Build and push
         run: |
-          docker build -t djblackett/ai-renamer-server:latest -f server.Dockerfile .
-          docker push djblackett/ai-renamer-server:latest
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/ai-renamer-server:latest -f server.Dockerfile .
+          docker push ${{ secrets.DOCKER_USERNAME }}/ai-renamer-server:latest
