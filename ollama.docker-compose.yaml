@@ -3,20 +3,28 @@ services:
     image: ollama/ollama
     container_name: ollama
     ports:
-      - "11434:11434" # Default Ollama HTTP API port
+      - "11434:11434"
     volumes:
       - ollama_models:/root/.ollama
     restart: unless-stopped
+    # Uncomment the deploy section below if you have an NVIDIA GPU
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+    # Health check to ensure Ollama is running
+    # This may be causing a performance hit, but the client needs to know when Ollama is ready
+    # If performance is an issue, consider removing this health check and run client manually
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "ollama list | grep -q mistral || ollama pull mistral > /dev/null 2>&1",
-        ]
+      test: ["CMD-SHELL", "ollama list || exit 1"]
       interval: 30s
-      timeout: 10s
-      retries: 10
-      start_period: 60s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   # Client for local development with Ollama
   client-local:
@@ -35,11 +43,9 @@ services:
       - --local
       - --model
       - mistral # Default model for local development - can be changed
-      - --copy
     volumes:
       - ./files/input:/app/files/input
       - ./files/output:/app/files/output
-    restart: unless-stopped
 
 volumes:
   ollama_models:

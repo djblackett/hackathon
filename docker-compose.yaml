@@ -4,53 +4,15 @@ services:
     container_name: client
 
     environment:
-      - OLLAMA_HOST="http://localhost:11434/api/generate"
-      - OPENAI_API_KEY=""
-      - AI_SERVER_URL="https://hackathon-rough-sunset-2856.fly.dev"
+      - OLLAMA_HOST=http://localhost:11434/api/generate
+      - AI_SERVER_URL=https://hackathon-rough-sunset-2856.fly.dev
 
-    # Multi-line command for better readability
     command:
       - --input
       - /app/files/input
       - --output
       - /app/files/output
-      - --copy
-
-    restart: unless-stopped
 
     volumes:
       - ./files/input:/app/files/input
       - ./files/output:/app/files/output
-
-  # # Development profile with debug flags
-  # client-dev:
-  #   extends: client
-  #   profiles: ["dev"]
-  #   container_name: client-dev
-  #   command:
-  #     - --input
-  #     - /app/files/input # do not modify this line without also modifying the volume mount
-  #     - --output
-  #     - /app/files/output # as above
-  #     - --debug
-  #     - --dry-run
-  #     - --copy
-  #     - --types
-  #     - txt,md,pdf,json,log
-  #   environment:
-  #     - DEBUG_MODE=true
-
-  # # Production profile with local Ollama
-  # client-prod:
-  #   extends: client
-  #   profiles: ["prod"]
-  #   container_name: client-prod
-  #   command:
-  #     - --input
-  #     - /app/files/input
-  #     - --output
-  #     - /app/files/output
-  #     - --local
-  #     - --model
-  #     - mistral
-  #     - --copy

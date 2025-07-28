@@ -28,7 +28,7 @@ A web server that provides AI filename suggestion services via HTTP API, deploya
 - 🧠 **Flexible AI backends**: Three modes - Direct OpenAI, Local Ollama, or Remote Fly.io server
 - 🗂️ **Clean naming**: Generates kebab-case filenames following best practices
 - 🛡️ **Privacy-focused**: Local Ollama mode keeps all data on your machine
-- 🔒 **OCR fallback**: Handles scanned PDFs using Tesseract OCR
+- 🚀 **GPU acceleration**: NVIDIA GPU support for faster local Ollama processing
 - ⚙️ **Easy deployment**: Simple CLI with automatic backend selection
 - 🔄 **Concurrent processing**: Efficient batch processing with configurable concurrency
 - 🎯 **Smart filtering**: Skip already well-named files automatically
@@ -40,8 +40,9 @@ A web server that provides AI filename suggestion services via HTTP API, deploya
 ### Prerequisites
 
 - [Go](https://go.dev/) 1.24+
-- [Docker](https://docker.com/) (for local Ollama)
-- [jq](https://jqlang.org/) (if docker is not used)
+- [Docker](https://docker.com/)
+- [jq](https://jqlang.org/) - if docker is not used
+- [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/index.html) - optional GPU acceleration (requires an NVIDIA GPU) - [Instructions](https://itsfoss.com/ollama-docker/)
 
 ### 1. Clone and Setup
 
@@ -79,8 +80,11 @@ go run ./cmd/client/main.go --input ./files/input --dry-run
 
 ```bash
 # Start Ollama and pull model
-docker compose up ollama -d
-docker exec -it hackathon-ollama-1 ollama pull mistral
+docker compose -f ollama.docker-compose.yaml up
+docker exec -it ollama pull mistral
+
+# For GPU acceleration (NVIDIA only): 
+# Uncomment the deploy section in ollama.docker-compose.yaml before starting
 
 # Run with local backend
 go run ./cmd/client/main.go --input ./files/input --local --model mistral --dry-run
@@ -186,8 +190,14 @@ curl -X POST https://hackathon-rough-sunset-2856.fly.dev/suggest-filename \
 When processing confidential documents, use local mode to keep all data on your machine:
 
 ```bash
+# Run ollama and client together
+docker compose -f ollama.docker-compose.yaml up
+
+# For NVIDIA GPU acceleration, uncomment the deploy section in ollama.docker-compose.yaml
+
+# For maximum performance, run separately (see note in ollama.docker-compose.yaml)
+docker compose -f ollama.docker-compose.yaml up client-local
 docker compose -f ollama.docker-compose.yaml up ollama
-./ai-renamer --input ./confidential --local --model mistral
 ```
 
 This ensures no file content is sent to external APIs.
