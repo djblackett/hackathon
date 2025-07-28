@@ -1,0 +1,45 @@
+services:
+  ollama:
+    image: ollama/ollama
+    container_name: ollama
+    ports:
+      - "11434:11434" # Default Ollama HTTP API port
+    volumes:
+      - ollama_models:/root/.ollama
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "ollama list | grep -q mistral || ollama pull mistral > /dev/null 2>&1",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  # Client for local development with Ollama
+  client-local:
+    build: .
+    container_name: client-local
+    depends_on:
+      ollama:
+        condition: service_healthy
+    env_file:
+      - .env.local
+    command:
+      - --input
+      - /app/files/input
+      - --output
+      - /app/files/output
+      - --local
+      - --model
+      - mistral # Default model for local development - can be changed
+      - --copy
+    volumes:
+      - ./files/input:/app/files/input
+      - ./files/output:/app/files/output
+    restart: unless-stopped
+
+volumes:
+  ollama_models:
