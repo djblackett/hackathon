@@ -44,6 +44,8 @@ I also learned that investing time in proper infrastructure really pays off. The
 
 The main limitation as the deadline approached was file type support. While the plugin-based extractor system is designed for easy extensibility, I prioritized building a solid foundation over breadth of formats. The current implementation handles common text-based files well, but expanding to office documents and OCR for image-based PDFs (via Tesseract and Pandoc) remains on the roadmap.
 
+Another consideration is that the current approach reads entire file contents for AI analysis, which isn't practical for large files. While I've implemented some optimization strategies like reading only the first few lines of CSV files, this approach needs to be expanded to other file types with smart content sampling, metadata extraction from documents, and intelligent truncation for large text files to minimize API costs and improve performance.
+
 I may have over-engineered the DevOps infrastructure, but Lane's emphasis on making projects "as easy as possible to run" resonated strongly. The comprehensive deployment options, ranging from simple remote server usage to full Kubernetes deployments, demonstrate production-readiness while maintaining simplicity for end users.
 
 **Outcome:**
