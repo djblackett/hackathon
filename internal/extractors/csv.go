@@ -5,7 +5,6 @@ import (
 	"strings"
 )
 
-// TODO - decide if I bypass AI for this or not
 type csvExtractor struct{}
 
 func (csvExtractor) CanHandle(path string) bool {

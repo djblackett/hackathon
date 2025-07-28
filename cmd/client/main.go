@@ -24,7 +24,7 @@ func main() {
 	cfg := config.FromEnv()
 
 	// Reasonable default extensions; can be overridden with --types "csv,html,…".
-	defaultFileTypes := []string{"txt", "md", "log", "cfg", "ini", "pdf", "json"}
+	defaultFileTypes := []string{"txt", "md", "csv", "pdf", "json", "html", "log", "cfg", "ini"}
 
 	// Define CLI application.
 	app := &cli.App{
