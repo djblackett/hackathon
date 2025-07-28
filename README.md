@@ -64,6 +64,24 @@ OLLAMA_BASE_URL=http://localhost:11434
 
 For privacy-focused processing with local AI:
 
+#### Using the integrated Ollama setup
+
+```bash
+# Start Ollama server
+docker compose -f ollama.docker-compose.yaml up ollama -d
+
+# Pull the mistral model (first time only)
+docker exec -it ollama ollama pull mistral
+
+# Now run the local client
+docker compose -f ollama.docker-compose.yaml up client-local
+
+# Or with debug mode
+docker compose -f ollama.docker-compose.yaml up client-local-dev
+```
+
+#### Or using separate containers
+
 ```bash
 docker compose up -d
 docker exec -it ollama ollama pull mistral

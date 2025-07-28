@@ -32,9 +32,15 @@ func main() {
 		Usage: "rename recovered docs via AI",
 		Flags: []cli.Flag{
 			&cli.StringFlag{ // where to start scanning; required.
-				Name:     "dir",
+				Name:     "input",
 				Required: true,
-				Usage:    "directory to scan",
+				Value:    "files/input", // default input directory
+				Usage:    "input directory to scan for files",
+			},
+			&cli.StringFlag{ // where to write output files.
+				Name:  "output",
+				Value: "files/output", // default output directory
+				Usage: "output directory for processed files",
 			},
 			&cli.BoolFlag{ // switch between OpenAI API and local Ollama.
 				Name:  "local",
@@ -62,14 +68,16 @@ func main() {
 				Value: false,
 				Usage: "flatten output directory structure",
 			},
-			&cli.StringSliceFlag{ // allowed extensions.
+			&cli.StringSliceFlag{ // allowed extensions. Overrides defaultFileTypes.
 				Name:  "types",
 				Value: cli.NewStringSlice(defaultFileTypes...),
+				Usage: "file types to process (comma-separated, e.g. txt,pdf,md)",
 			},
 		},
 		Action: func(c *cli.Context) error {
 			// Harvest flag values.
-			dir := c.String("dir")
+			input := c.String("input")
+			output := c.String("output")
 			local := c.Bool("local")
 			model := c.String("model")
 			dry := c.Bool("dry-run")
@@ -120,22 +128,22 @@ func main() {
 				// Depending on flags, perform or log the operation.
 				switch {
 				case dry && copyMode:
-					log.Printf("[DRY] %s  →  files/output/%s\n", path, sanitized+ext)
+					log.Printf("[DRY] %s  →  %s/%s\n", path, output, sanitized+ext)
 				case dry && !copyMode:
 					log.Printf("[DRY] %s  →  %s\n", path, sanitized+ext)
 				case copyMode:
-					if err := utils.CopyFile(dir, path, "files/output", sanitized, flatten); err != nil {
+					if err := utils.CopyFile(input, path, output, sanitized, flatten); err != nil {
 						errChan <- err
 					}
 				default: // rename in place
-					if err := utils.RenameFile(dir, path, sanitized); err != nil {
+					if err := utils.RenameFile(input, path, sanitized); err != nil {
 						errChan <- err
 					}
 				}
 			}
 
 			// Walk the directory tree and dispatch work.
-			if err := extractors.Walk(dir, types, func(path, content string) error {
+			if err := extractors.Walk(input, types, func(path, content string) error {
 				wg.Add(1)
 				go processFile(path, content)
 				return nil // continue walking

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -22,14 +23,19 @@ type OllamaClient struct {
 }
 
 func NewOllamaClient(model string) *OllamaClient {
-	return &OllamaClient{model: model, url: "http://localhost:11434/api/generate"}
+	// Get OLLAMA_HOST from environment, fallback to localhost for local development
+	url := os.Getenv("OLLAMA_HOST")
+	if url == "" {
+		url = "http://localhost:11434/api/generate"
+	}
+	return &OllamaClient{model: model, url: url}
 }
 
 func (o *OllamaClient) SuggestFilename(content string) (string, error) {
 	prompt := buildPrompt(content)
 	body, _ := json.Marshal(ollamaReq{Model: o.model, Prompt: prompt})
 
-	cl := http.Client{Timeout: 60 * time.Second}
+	cl := http.Client{Timeout: 300 * time.Second} // Increased to 5 minutes for model loading
 	resp, err := cl.Post(o.url, "application/json", bytes.NewBuffer(body))
 	if err != nil {
 		return "", err

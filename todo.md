@@ -13,6 +13,8 @@
 - have different defaults for ai_model depending on whether --local is set - done
 -- add model verification on server - done
 
+- make default values for input and output dirs - done
+
 ********************************************
 
 - find alternative to jq if I don't have time to implement tessarect or other external cmds (will make installation easier)
