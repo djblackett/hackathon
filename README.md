@@ -2,6 +2,21 @@
 
 AI File Renamer is a CLI tool for automatically renaming files based on their content using AI. It supports three backends: direct OpenAI API, local Ollama, or a remote Fly.io server.
 
+## 📑 Table of Contents
+
+- [🏗️ Architecture](#️-architecture)
+- [✨ Features](#-features)
+- [🚀 Quick Start](#-quick-start)
+- [🔧 CLI Options](#-cli-options)
+- [🌐 API Reference](#-api-reference)
+- [🔐 Privacy & Security](#-privacy--security)
+- [🚀 Deployment](#-deployment)
+- [⚙️ DevOps](#️-devops)
+- [🛠️ Roadmap](#️-roadmap)
+- [🤝 Contributing](#-contributing)
+- [📄 License](#-license)
+- [🙏 Acknowledgments](#-acknowledgments)
+
 ---
 
 ## 🏗️ Architecture
@@ -29,6 +44,7 @@ A web server that provides AI filename suggestion services via HTTP API, deploya
 - 🗂️ **Clean naming**: Generates kebab-case filenames following best practices
 - 🛡️ **Privacy-focused**: Local Ollama mode keeps all data on your machine
 - 🚀 **GPU acceleration**: NVIDIA GPU support for faster local Ollama processing
+- 🔌 **Plugin architecture**: Modular extractor system makes adding new file types straightforward
 - ⚙️ **Easy deployment**: Simple CLI with automatic backend selection
 - 🔄 **Concurrent processing**: Efficient batch processing with configurable concurrency
 - 🎯 **Smart filtering**: Skip already well-named files automatically
@@ -79,16 +95,17 @@ go run ./cmd/client/main.go --input ./files/input --dry-run
 #### Option B: Local Ollama (Privacy-focused)
 
 ```bash
-# Start Ollama and pull model
-docker compose -f ollama.docker-compose.yaml up
-docker exec -it ollama pull mistral
+# Start Ollama with Docker Compose
+docker compose -f ollama.docker-compose.yaml up ollama -d
 
-# For GPU acceleration (NVIDIA only): 
-# Uncomment the deploy section in ollama.docker-compose.yaml before starting
+# Pull the model (if not already downloaded)
+docker exec -it ollama ollama pull mistral
 
 # Run with local backend
 go run ./cmd/client/main.go --input ./files/input --local --model mistral --dry-run
 ```
+
+> **💡 Tip**: For GPU acceleration or detailed privacy setup, see the [Privacy & Security](#-privacy--security) section.
 
 #### Option C: Direct OpenAI
 
