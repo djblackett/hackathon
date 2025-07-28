@@ -32,10 +32,9 @@ func main() {
 		Usage: "rename recovered docs via AI",
 		Flags: []cli.Flag{
 			&cli.StringFlag{ // where to start scanning; required.
-				Name:     "input",
-				Required: true,
-				Value:    "files/input", // default input directory
-				Usage:    "input directory to scan for files",
+				Name:  "input",
+				Value: "files/input", // default input directory
+				Usage: "input directory to scan for files",
 			},
 			&cli.StringFlag{ // where to write output files.
 				Name:  "output",
@@ -54,10 +53,9 @@ func main() {
 				Name:  "dry-run",
 				Usage: "preview changes only",
 			},
-			&cli.BoolFlag{ // copy instead of rename; safer default (true).
-				Name:  "copy",
-				Value: true,
-				Usage: "copy files to output directory instead of renaming originals",
+			&cli.BoolFlag{ // rename instead of copy; copy is safer default.
+				Name:  "rename",
+				Usage: "rename files in place instead of copying to output directory",
 			},
 			&cli.BoolFlag{
 				Name:  "debug",
@@ -81,7 +79,7 @@ func main() {
 			local := c.Bool("local")
 			model := c.String("model")
 			dry := c.Bool("dry-run")
-			copyMode := c.Bool("copy")
+			renameMode := c.Bool("rename")
 			debug := c.Bool("debug")
 			flatten := c.Bool("flatten")
 
@@ -127,11 +125,11 @@ func main() {
 
 				// Depending on flags, perform or log the operation.
 				switch {
-				case dry && copyMode:
+				case dry && !renameMode:
 					log.Printf("[DRY] %s  →  %s/%s\n", path, output, sanitized+ext)
-				case dry && !copyMode:
+				case dry && renameMode:
 					log.Printf("[DRY] %s  →  %s\n", path, sanitized+ext)
-				case copyMode:
+				case !renameMode:
 					if err := utils.CopyFile(input, path, output, sanitized, flatten); err != nil {
 						errChan <- err
 					}

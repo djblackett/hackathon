@@ -1,31 +1,35 @@
 # AI File Renamer
 
-AI File Renamer is a comprehensive solution for automatically renaming files based on their content using AI. It consists of both a CLI tool for local file processing and a web server API for remote AI-powered filename suggestions.
+AI File Renamer is a CLI tool for automatically renaming files based on their content using AI. It supports three backends: direct OpenAI API, local Ollama, or a remote Fly.io server.
 
 ---
 
 ## 🏗️ Architecture
 
-This project provides two main components:
+This project provides a unified CLI tool with three different AI backend options:
 
 ### 📱 CLI Client (`cmd/client/`)
 
-A command-line tool that scans directories for poorly named files and uses AI to suggest better filenames based on content.
+A command-line tool that scans directories for poorly named files and uses AI to suggest better filenames based on content. The CLI can operate in three modes:
+
+1. **🔗 Direct OpenAI Mode**: When `OPENAI_API_KEY` is provided, communicates directly with OpenAI APIs
+2. **🏠 Local Ollama Mode**: Use `--local` flag to process files with a local Ollama instance for privacy
+3. **☁️ Remote Server Mode**: Defaults to using a remote AI service deployed on Fly.io when no API key is available
 
 ### 🌐 Server API (`cmd/server/`)
 
-A web server that provides AI filename suggestion services via HTTP API, deployable to cloud platforms like Fly.io.
+A web server that provides AI filename suggestion services via HTTP API, deployable to cloud platforms like Fly.io. This serves as the backend for the remote server mode.
 
 ---
 
 ## ✨ Features
 
-- 📁 **Multi-format support**: Scans `.txt`, `.md`, `.pdf`, `.json`, `.log`, `.cfg`, `.ini` files
-- 🧠 **AI-powered**: Uses OpenAI GPT models or local Ollama for intelligent filename suggestions
+- 📁 **Multi-format support**: Scans `.txt`, `.md`, `.pdf`, `.json`, `.log`, `.cfg`, `.ini` files (more to come)
+- 🧠 **Flexible AI backends**: Three modes - Direct OpenAI, Local Ollama, or Remote Fly.io server
 - 🗂️ **Clean naming**: Generates kebab-case filenames following best practices
-- 🛡️ **Privacy-focused**: Optional local LLM via Docker (Ollama) for sensitive documents
+- 🛡️ **Privacy-focused**: Local Ollama mode keeps all data on your machine
 - 🔒 **OCR fallback**: Handles scanned PDFs using Tesseract OCR
-- ⚙️ **Flexible deployment**: CLI for local use, server API for remote access
+- ⚙️ **Easy deployment**: Simple CLI with automatic backend selection
 - 🔄 **Concurrent processing**: Efficient batch processing with configurable concurrency
 - 🎯 **Smart filtering**: Skip already well-named files automatically
 
@@ -36,9 +40,8 @@ A web server that provides AI filename suggestion services via HTTP API, deploya
 ### Prerequisites
 
 - [Go](https://go.dev/) 1.24+
-- [`pdftotext`](https://poppler.freedesktop.org/) (Poppler utils) for PDF processing
-- [`tesseract`](https://github.com/tesseract-ocr/tesseract) OCR engine for scanned PDFs
-- [Docker](https://docker.com/) (optional, for local Ollama)
+- [Docker](https://docker.com/) (for local Ollama)
+- [jq](https://jqlang.org/) (if docker is not used)
 
 ### 1. Clone and Setup
 
@@ -46,74 +49,48 @@ A web server that provides AI filename suggestion services via HTTP API, deploya
 git clone https://github.com/djblackett/bootdev-hackathon.git
 cd bootdev-hackathon
 go mod download
+mv -n .env.example .env
 ```
 
-### 2. Environment Configuration
+### Quick Start (Recommended)
 
-Create a `.env` file with your API keys:
+For the fastest experience, simply put your files in the `files/input/` folder and run:
 
 ```bash
-# For OpenAI (required for remote AI)
-OPENAI_API_KEY=your_openai_api_key_here
+# Put your files here (or use provided sample files)
+cp /path/to/your/files/* files/input/
 
-# For local Ollama (optional)
-OLLAMA_BASE_URL=http://localhost:11434
+# Run with default settings (uses remote server)
+go run ./cmd/client/main.go
+
+# Renamed files will appear in files/output/
 ```
 
-### 3. Start Local LLM (Optional)
+### 2. Choose Your Backend
 
-For privacy-focused processing with local AI:
-
-#### Using the integrated Ollama setup
+#### Option A: Remote Server (No setup required)
 
 ```bash
-# Start Ollama server
-docker compose -f ollama.docker-compose.yaml up ollama -d
-
-# Pull the mistral model (first time only)
-docker exec -it ollama ollama pull mistral
-
-# Now run the local client
-docker compose -f ollama.docker-compose.yaml up client-local
-
-# Or with debug mode
-docker compose -f ollama.docker-compose.yaml up client-local-dev
+# Uses remote Fly.io server automatically
+go run ./cmd/client/main.go --input ./files/input --dry-run
 ```
 
-#### Or using separate containers
+#### Option B: Local Ollama (Privacy-focused)
 
 ```bash
-docker compose up -d
-docker exec -it ollama ollama pull mistral
-```
+# Start Ollama and pull model
+docker compose up ollama -d
+docker exec -it hackathon-ollama-1 ollama pull mistral
 
-### 4. Run the CLI
-
-```bash
-# Preview mode with local AI
+# Run with local backend
 go run ./cmd/client/main.go --input ./files/input --local --model mistral --dry-run
-
-# Actual renaming with OpenAI
-go run ./cmd/client/main.go --input ./files/input --model gpt-3.5-turbo
-
-# Build and run
-go build -o ai-renamer ./cmd/client/
-./ai-renamer --input ./documents --dry-run
 ```
 
-### 5. Deploy Server (Optional)
-
-Deploy the API server to Fly.io:
+#### Option C: Direct OpenAI
 
 ```bash
-fly deploy
-```
-
-Or run locally:
-
-```bash
-go run ./cmd/server/main.go
-# Server starts on http://localhost:8080
+# Make sure OPENAI_API_KEY is set in .env
+go run ./cmd/client/main.go --input ./files/input --dry-run
 ```
 
 ---
@@ -122,24 +99,27 @@ go run ./cmd/server/main.go
 
 | Flag | Description | Default |
 |------|-------------|---------|
-| `--input` | Directory to scan for files | `files/input` (*required*) |
+| `--input` | Directory to scan for files | `files/input` |
 | `--output` | Output directory for processed files | `files/output` |
 | `--types` | File extensions to process (comma-separated) | `txt,md,log,cfg,ini,pdf,json` |
 | `--local` | Use local Ollama instead of OpenAI | `false` |
 | `--model` | AI model name | `gpt-3.5-turbo` (OpenAI) / `mistral` (Ollama) |
 | `--dry-run` | Preview changes without processing | `false` |
-| `--copy` | Copy files to output directory instead of renaming | `true` |
+| `--rename` | Rename files in place instead of copying to output | `false` |
 | `--debug` | Return all errors joined together | `false` |
 | `--flatten` | Flatten output directory structure | `false` |
 
 ### Examples
 
 ```bash
-# Basic usage with OpenAI
+# Mode 1: Direct OpenAI (when OPENAI_API_KEY is set)
 ./ai-renamer --input ./documents
 
-# Privacy mode with local AI
+# Mode 2: Local Ollama (privacy-focused)
 ./ai-renamer --input ./sensitive-docs --local --model mistral
+
+# Mode 3: Remote Fly.io server (default when no API key)
+./ai-renamer --input ./documents
 
 # Preview only, specific file types
 ./ai-renamer --input ./logs --types "log,txt" --dry-run
@@ -149,6 +129,9 @@ go run ./cmd/server/main.go
 
 # Debug mode to see all errors
 ./ai-renamer --input ./documents --debug
+
+# Rename files in place to save space (requires bravery)
+./ai-renamer --input ./documents --rename
 ```
 
 ---
@@ -189,7 +172,7 @@ Request filename suggestions based on file content.
 **Example:**
 
 ```bash
-curl -X POST https://your-app.fly.dev/suggest-filename \
+curl -X POST https://hackathon-rough-sunset-2856.fly.dev/suggest-filename \
   -H "Content-Type: application/json" \
   -d '{"content": "Meeting notes from quarterly review...", "model": "gpt-4o"}'
 ```
@@ -203,77 +186,33 @@ curl -X POST https://your-app.fly.dev/suggest-filename \
 When processing confidential documents, use local mode to keep all data on your machine:
 
 ```bash
+docker compose -f ollama.docker-compose.yaml up ollama
 ./ai-renamer --input ./confidential --local --model mistral
 ```
 
 This ensures no file content is sent to external APIs.
 
-### Supported AI Backends
-
-- **OpenAI GPT** (default): Best accuracy, requires API key and internet
-- **Local Ollama**: Privacy-focused, runs entirely offline after setup
-
----
-
-## 📂 Project Structure
-
-```text
-├── cmd/
-│   ├── client/          # CLI application
-│   └── server/          # HTTP API server
-├── internal/
-│   ├── ai/              # AI clients (OpenAI, Ollama, HTTP)
-│   ├── config/          # Environment configuration
-│   ├── extractors/      # File content extraction (PDF, text, etc.)
-│   └── utils/           # Utilities (logging, sanitization)
-├── files/
-│   ├── input/           # Sample input files
-│   └── output/          # Renamed output files
-├── docker-compose.yaml  # Ollama local AI setup
-├── server.Dockerfile    # Server container
-├── Dockerfile           # Client container
-└── fly.toml            # Fly.io deployment config
-```
-
 ---
 
 ## 🚀 Deployment
 
-### Fly.io (Recommended)
-
-1. Install [Fly CLI](https://fly.io/docs/flyctl/)
-2. Deploy the server:
+### Server Deployment
 
 ```bash
+# Deploy to Fly.io
 fly deploy
 ```
 
-The server will be available at `https://your-app.fly.dev`
-
-### Docker
-
-```bash
-# Build server image
-docker build -f server.Dockerfile -t ai-renamer-server .
-
-# Run server
-docker run -p 8080:8080 -e OPENAI_API_KEY=your_key ai-renamer-server
-
-# Build client image
-docker build -f Dockerfile -t ai-renamer-client .
-```
-
-### Local Development
-
-```bash
-# Run server
-go run ./cmd/server/main.go
-
-# Run client
-go run ./cmd/client/main.go --input ./files/input --dry-run
-```
-
 ---
+
+## ⚙️ DevOps
+
+This project includes comprehensive DevOps configurations:
+
+- **🐳 Docker**: Multi-stage Dockerfiles for both client and server components
+- **🔄 GitHub Actions**: Automated Docker Hub publishing on version tags
+- **☸️ Kubernetes**: Ready-to-deploy K8s manifests in `k8s-deployment.yaml`
+- **🐙 Docker Compose**: Local development with Ollama integration
 
 ---
 
@@ -292,13 +231,11 @@ go run ./cmd/client/main.go --input ./files/input --dry-run
 ### Planned Enhancements 🔄
 
 - [ ] OCR for scanned documents
-- [ ] Web UI frontend
+- [ ] Whisper integration for parsing voice recordings
+- [ ] Electron desktop app
 - [ ] Batch API endpoints
 - [ ] File deduplication
 - [ ] Automatic language detection
-- [ ] Custom prompt templates
-- [ ] Integration webhooks
-- [ ] Electron desktop app
 
 ---
 

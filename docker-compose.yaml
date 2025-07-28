@@ -22,35 +22,35 @@ services:
       - ./files/input:/app/files/input
       - ./files/output:/app/files/output
 
-  # Development profile with debug flags
-  client-dev:
-    extends: client
-    profiles: ["dev"]
-    container_name: client-dev
-    command:
-      - --input
-      - /app/files/input # do not modify this line without also modifying the volume mount
-      - --output
-      - /app/files/output # as above
-      - --debug
-      - --dry-run
-      - --copy
-      - --types
-      - txt,md,pdf,json,log
-    environment:
-      - DEBUG_MODE=true
+  # # Development profile with debug flags
+  # client-dev:
+  #   extends: client
+  #   profiles: ["dev"]
+  #   container_name: client-dev
+  #   command:
+  #     - --input
+  #     - /app/files/input # do not modify this line without also modifying the volume mount
+  #     - --output
+  #     - /app/files/output # as above
+  #     - --debug
+  #     - --dry-run
+  #     - --copy
+  #     - --types
+  #     - txt,md,pdf,json,log
+  #   environment:
+  #     - DEBUG_MODE=true
 
-  # Production profile with local Ollama
-  client-prod:
-    extends: client
-    profiles: ["prod"]
-    container_name: client-prod
-    command:
-      - --input
-      - /app/files/input
-      - --output
-      - /app/files/output
-      - --local
-      - --model
-      - mistral
-      - --copy
+  # # Production profile with local Ollama
+  # client-prod:
+  #   extends: client
+  #   profiles: ["prod"]
+  #   container_name: client-prod
+  #   command:
+  #     - --input
+  #     - /app/files/input
+  #     - --output
+  #     - /app/files/output
+  #     - --local
+  #     - --model
+  #     - mistral
+  #     - --copy
