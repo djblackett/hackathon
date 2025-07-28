@@ -25,6 +25,10 @@ FROM alpine:3.20 AS final
 # Copy CA certificates from deps stage for TLS connections
 COPY --from=deps /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 
+# Set SSL certificate path environment variable for Go
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+ENV SSL_CERT_DIR=/etc/ssl/certs
+
 # Copy only runtime tools from deps image
 COPY --from=deps /usr/bin/jq /usr/bin/jq
 # COPY --from=deps /usr/bin/pdftotext /usr/bin/pdftotext
