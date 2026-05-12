@@ -2,6 +2,25 @@ package ai
 
 import "fmt"
 
+func buildEvidencePrompt(evidence string) string {
+	return fmt.Sprintf(`You are a file recovery assistant.
+A file was recovered without trustworthy filesystem metadata. You are receiving only selected internal metadata and ranked text snippets, not the full file.
+
+Evidence:
+"""
+%s
+"""
+
+Generate one descriptive filename from the evidence.
+Rules:
+- lowercase words separated by dashes
+- no file extension
+- 5-8 meaningful words when possible
+- avoid generic words: document, file, draft, text, note, notes, recovered, unknown
+- use dates, IDs, project names, titles, or subjects when they are clearly meaningful
+- respond with the filename only`, evidence)
+}
+
 func buildPrompt(content string) string {
 	return fmt.Sprintf(`
 	%s

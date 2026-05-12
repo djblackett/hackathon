@@ -12,8 +12,9 @@ import (
 )
 
 type FilenameRequest struct {
-	Content string `json:"content"`
-	Model   string `json:"model"`
+	Content      string `json:"content"`
+	Model        string `json:"model"`
+	EvidenceOnly bool   `json:"evidence_only,omitempty"`
 }
 
 type FilenameResponse struct {
@@ -80,7 +81,12 @@ func main() {
 		}
 		log.Println("AI client created successfully")
 
-		suggested, err := client.SuggestFilename(req.Content)
+		var suggested string
+		if req.EvidenceOnly {
+			suggested, err = client.SuggestFilenameFromEvidence(req.Content)
+		} else {
+			suggested, err = client.SuggestFilename(req.Content)
+		}
 		resp := FilenameResponse{Filename: suggested}
 		if err != nil {
 			log.Printf("AI suggestion failed: %v", err)

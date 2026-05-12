@@ -33,6 +33,14 @@ func NewOllamaClient(model string) *OllamaClient {
 
 func (o *OllamaClient) SuggestFilename(content string) (string, error) {
 	prompt := buildPrompt(content)
+	return o.generate(prompt)
+}
+
+func (o *OllamaClient) SuggestFilenameFromEvidence(evidence string) (string, error) {
+	return o.generate(buildEvidencePrompt(evidence))
+}
+
+func (o *OllamaClient) generate(prompt string) (string, error) {
 	body, _ := json.Marshal(ollamaReq{Model: o.model, Prompt: prompt})
 
 	cl := http.Client{Timeout: 300 * time.Second} // Increased to 5 minutes for model loading

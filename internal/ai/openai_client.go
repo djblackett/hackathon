@@ -89,3 +89,23 @@ Respond with the filename only.`, builder)
 
 	return strings.TrimSpace(filename), nil
 }
+
+func (o *OpenAIClient) SuggestFilenameFromEvidence(evidence string) (string, error) {
+	ctx := context.Background()
+
+	resp, err := o.cl.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
+		Model:       o.model,
+		MaxTokens:   32,
+		Temperature: 0.2,
+		Messages: []openai.ChatCompletionMessage{
+			{Role: "system", Content: "You create concise filenames from recovered-file metadata. Respond with one filename only."},
+			{Role: "user", Content: buildEvidencePrompt(evidence)},
+		},
+	})
+	if err != nil {
+		return "", err
+	}
+
+	filename := strings.SplitN(resp.Choices[0].Message.Content, "\n", 2)[0]
+	return strings.TrimSpace(filename), nil
+}

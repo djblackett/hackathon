@@ -161,11 +161,17 @@ func main() {
 					if strategy == "auto" {
 						content = analysis.CompactEvidence(info, maxAIChars)
 						method = "ai-fallback"
+						log.Printf("[AI] %s local confidence %.2f below threshold %.2f; sending %d compact evidence chars\n", path, confidence, confidenceThreshold, len(content))
 					} else {
 						method = "ai-only"
 					}
 
-					aiSuggested, err := client.SuggestFilename(content)
+					var aiSuggested string
+					if strategy == "auto" {
+						aiSuggested, err = client.SuggestFilenameFromEvidence(content)
+					} else {
+						aiSuggested, err = client.SuggestFilename(content)
+					}
 					if err != nil {
 						errChan <- err
 						return

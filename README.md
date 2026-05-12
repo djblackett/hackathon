@@ -204,9 +204,12 @@ Request filename suggestions based on file content.
 ```json
 {
   "content": "File content to analyze...",
-  "model": "gpt-4o"
+  "model": "gpt-4o",
+  "evidence_only": false
 }
 ```
+
+Set `evidence_only` to `true` when `content` contains compact metadata and ranked snippets instead of full file contents.
 
 **Response:**
 

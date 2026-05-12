@@ -46,3 +46,21 @@ func TestCompactEvidenceLimitsOutput(t *testing.T) {
 		t.Fatalf("compact evidence missing detected type: %q", got)
 	}
 }
+
+func TestCompactEvidenceIncludesConstraintsWhenRoomAllows(t *testing.T) {
+	info := extractors.ExtractedFileInfo{
+		DetectedType: "csv",
+		TextSamples: []extractors.TextSample{
+			{Source: "csv-headers", Text: "customer_name customer_email account_status", Score: 0.85},
+		},
+	}
+
+	got := CompactEvidence(info, 1000)
+
+	if !strings.Contains(got, "constraints:") {
+		t.Fatalf("compact evidence missing constraints: %q", got)
+	}
+	if !strings.Contains(got, "csv-headers") {
+		t.Fatalf("compact evidence missing ranked source: %q", got)
+	}
+}

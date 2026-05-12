@@ -9,6 +9,7 @@ import (
 
 type Client interface {
 	SuggestFilename(content string) (string, error)
+	SuggestFilenameFromEvidence(evidence string) (string, error)
 }
 
 func NewClient(cfg config.Config, local bool, model string) (Client, error) {
