@@ -149,7 +149,7 @@ go run ./cmd/client/main.go --input ./files/input --dry-run
 |------|-------------|---------|
 | `--input` | Directory to scan for files | `files/input` |
 | `--output` | Output directory for processed files | `files/output` |
-| `--types` | File extensions or detected content types to process (comma-separated) | `txt,md,csv,pdf,json,html,log,cfg,ini,docx,xlsx,pptx,office,eml,email,image,media` |
+| `--types` | File extensions or detected content types to process (comma-separated) | `txt,text,md,markdown,csv,pdf,json,html,log,cfg,ini,docx,xlsx,pptx,office,eml,email,image,media` |
 | `--local` | Use local Ollama instead of OpenAI | `false` |
 | `--model` | AI model name | `gpt-3.5-turbo` (OpenAI) / `mistral` (Ollama) |
 | `--dry-run` | Preview changes without processing | `false` |
@@ -160,6 +160,7 @@ go run ./cmd/client/main.go --input ./files/input --dry-run
 | `--confidence-threshold` | Minimum local confidence before `auto` skips AI fallback | `0.75` |
 | `--max-ai-chars` | Maximum compact evidence characters sent to AI in `auto` mode | `2000` |
 | `--report` | Write a JSON report of processed files | none |
+| `--apply-report` | Copy files using destinations from a previous JSON report | none |
 
 ### Examples
 
@@ -184,6 +185,9 @@ go run ./cmd/client/main.go --input ./files/input --dry-run
 
 # Preview changes and write an audit report
 ./ai-renamer --input ./documents --strategy metadata-only --dry-run --report report.json
+
+# Apply a reviewed dry-run report
+./ai-renamer --apply-report report.json
 
 # Copy to custom output directory with flattened structure
 ./ai-renamer --input ./files --output ./renamed --flatten

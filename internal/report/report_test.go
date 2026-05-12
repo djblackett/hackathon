@@ -36,3 +36,23 @@ func TestWriteReport(t *testing.T) {
 		t.Fatalf("unexpected report: %+v", got)
 	}
 }
+
+func TestReadReport(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "report.json")
+	if err := Write(path, []Entry{{
+		SourcePath:      "input/a.txt",
+		DestinationPath: "output/a.txt",
+		SuggestedName:   "a.txt",
+		Method:          "metadata",
+	}}); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := Read(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Entries) != 1 || got.Entries[0].DestinationPath != "output/a.txt" {
+		t.Fatalf("unexpected report: %+v", got)
+	}
+}

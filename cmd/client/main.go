@@ -19,7 +19,15 @@ import (
 	"github.com/djblackett/bootdev-hackathon/internal/utils"
 )
 
+var newAIClient = ai.NewClient
+
 func main() {
+	if err := runApp(os.Args); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func runApp(args []string) error {
 	// Load environment variables from .env (useful during local dev).
 	_ = godotenv.Load() // Ignore errors if .env is not present - for docker
 
@@ -27,7 +35,7 @@ func main() {
 	cfg := config.FromEnv()
 
 	// Reasonable default extensions; can be overridden with --types "csv,html,…".
-	defaultFileTypes := []string{"txt", "md", "csv", "pdf", "json", "html", "log", "cfg", "ini", "docx", "xlsx", "pptx", "office", "eml", "email", "image", "media"}
+	defaultFileTypes := []string{"txt", "text", "md", "markdown", "csv", "pdf", "json", "html", "log", "cfg", "ini", "docx", "xlsx", "pptx", "office", "eml", "email", "image", "media"}
 
 	// Define CLI application.
 	app := &cli.App{
@@ -88,6 +96,10 @@ func main() {
 				Name:  "report",
 				Usage: "write a JSON report of processed files",
 			},
+			&cli.StringFlag{
+				Name:  "apply-report",
+				Usage: "copy files using destinations from a previously generated JSON report",
+			},
 			&cli.StringSliceFlag{ // allowed extensions. Overrides defaultFileTypes.
 				Name:  "types",
 				Value: cli.NewStringSlice(defaultFileTypes...),
@@ -108,6 +120,11 @@ func main() {
 			confidenceThreshold := c.Float64("confidence-threshold")
 			maxAIChars := c.Int("max-ai-chars")
 			reportPath := c.String("report")
+			applyReportPath := c.String("apply-report")
+
+			if applyReportPath != "" {
+				return applyReport(applyReportPath, dry)
+			}
 
 			switch strategy {
 			case "auto", "metadata-only", "ai-only":
@@ -137,7 +154,7 @@ func main() {
 			getAIClient := func() (ai.Client, error) {
 				clientOnce.Do(func() {
 					// Spin up LLM client once; reused by all goroutines.
-					client, clientErr = ai.NewClient(cfg, local, defaultModel)
+					client, clientErr = newAIClient(cfg, local, defaultModel)
 				})
 				return client, clientErr
 			}
@@ -287,7 +304,27 @@ func main() {
 	}
 
 	// Kick everything off.
-	if err := app.Run(os.Args); err != nil {
-		log.Fatal(err)
+	return app.Run(args)
+}
+
+func applyReport(path string, dry bool) error {
+	planned, err := report.Read(path)
+	if err != nil {
+		return err
 	}
+
+	for _, entry := range planned.Entries {
+		if entry.SourcePath == "" || entry.DestinationPath == "" {
+			continue
+		}
+		if dry {
+			log.Printf("[DRY] %s  →  %s method=apply-report confidence=%.2f\n", entry.SourcePath, entry.DestinationPath, entry.Confidence)
+			continue
+		}
+		if err := utils.CopyFileToPath(entry.SourcePath, entry.DestinationPath); err != nil {
+			return err
+		}
+		log.Printf("[APPLY] %s  →  %s\n", entry.SourcePath, entry.DestinationPath)
+	}
+	return nil
 }

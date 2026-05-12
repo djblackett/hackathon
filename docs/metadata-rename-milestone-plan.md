@@ -174,6 +174,33 @@ Success criteria:
 - No format-specific logic leaks into the main client flow.
 - External tools are optional and fail gracefully when missing.
 
+## Milestone 7: Quality and Review Workflow
+
+Goal: reduce bad names, make batch runs auditable, and make real recovered-file runs safer.
+
+Deliverables:
+
+- Maintain a small recovered-file fixture corpus in `testdata/recovered/`.
+- Add CLI integration tests that run dry-run report generation against the fixture corpus.
+- Add collision tests for duplicate generated names.
+- Improve low-confidence handling so random-looking text becomes `unidentified-content` instead of a bogus filename.
+- Add report-driven review mode:
+  - generate a report with `--dry-run --report report.json`
+  - inspect or edit the report
+  - apply it later with `--apply-report report.json`
+- Improve Office evidence extraction:
+  - workbook sheet names
+  - spreadsheet first-row headers
+  - presentation slide titles
+
+Success criteria:
+
+- Dry-run report generation is covered by an end-to-end test.
+- Applying a report copies files to the planned destinations.
+- Duplicate output names get stable suffixes such as `-2`.
+- Random content stays low confidence and can trigger AI fallback in `auto`.
+- Office files produce more useful local evidence before AI fallback.
+
 ## Starting Recommendation
 
 Start with Milestone 1 only. It delivers the core architectural improvement without taking on every possible file format at once.

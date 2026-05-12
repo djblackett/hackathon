@@ -31,3 +31,15 @@ func Write(path string, entries []Entry) error {
 	}
 	return os.WriteFile(path, data, 0644)
 }
+
+func Read(path string) (Report, error) {
+	var report Report
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return report, err
+	}
+	if err := json.Unmarshal(data, &report); err != nil {
+		return report, err
+	}
+	return report, nil
+}

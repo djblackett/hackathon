@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -69,6 +70,32 @@ func (officeExtractor) ExtractInfo(path string) (ExtractedFileInfo, error) {
 			Text:   content,
 			Score:  0.65,
 		})
+	}
+
+	switch subtype {
+	case "xlsx":
+		for _, sheet := range xlsxSheetNames(zr.File) {
+			info.TextSamples = append(info.TextSamples, TextSample{
+				Source: "office-sheet-name",
+				Text:   sheet,
+				Score:  0.78,
+			})
+		}
+		if headers := xlsxFirstRowHeaders(zr.File); headers != "" {
+			info.TextSamples = append(info.TextSamples, TextSample{
+				Source: "office-headers",
+				Text:   headers,
+				Score:  0.86,
+			})
+		}
+	case "pptx":
+		for _, title := range pptxSlideTitles(zr.File) {
+			info.TextSamples = append(info.TextSamples, TextSample{
+				Source: "office-slide-title",
+				Text:   title,
+				Score:  0.88,
+			})
+		}
 	}
 
 	if len(info.TextSamples) == 0 {
@@ -151,6 +178,172 @@ func officeText(files []*zip.File, subtype string) string {
 	return strings.Join(parts, " ")
 }
 
+func xlsxSheetNames(files []*zip.File) []string {
+	data := readZipFile(files, "xl/workbook.xml")
+	if data == "" {
+		return nil
+	}
+
+	decoder := xml.NewDecoder(strings.NewReader(data))
+	var names []string
+	for {
+		token, err := decoder.Token()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return names
+		}
+		start, ok := token.(xml.StartElement)
+		if !ok || strings.ToLower(start.Name.Local) != "sheet" {
+			continue
+		}
+		for _, attr := range start.Attr {
+			if strings.ToLower(attr.Name.Local) == "name" && strings.TrimSpace(attr.Value) != "" {
+				names = append(names, strings.TrimSpace(attr.Value))
+			}
+		}
+	}
+	return names
+}
+
+func xlsxFirstRowHeaders(files []*zip.File) string {
+	shared := xlsxSharedStrings(files)
+	data := readZipFile(files, "xl/worksheets/sheet1.xml")
+	if data == "" {
+		return ""
+	}
+
+	decoder := xml.NewDecoder(strings.NewReader(data))
+	var (
+		inFirstRow bool
+		cellType   string
+		inValue    bool
+		headers    []string
+	)
+	for {
+		token, err := decoder.Token()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return strings.Join(headers, " ")
+		}
+		switch t := token.(type) {
+		case xml.StartElement:
+			switch strings.ToLower(t.Name.Local) {
+			case "row":
+				inFirstRow = false
+				for _, attr := range t.Attr {
+					if strings.ToLower(attr.Name.Local) == "r" && attr.Value == "1" {
+						inFirstRow = true
+					}
+				}
+			case "c":
+				cellType = ""
+				for _, attr := range t.Attr {
+					if strings.ToLower(attr.Name.Local) == "t" {
+						cellType = attr.Value
+					}
+				}
+			case "v", "t":
+				inValue = inFirstRow
+			}
+		case xml.EndElement:
+			switch strings.ToLower(t.Name.Local) {
+			case "row":
+				if inFirstRow {
+					return strings.Join(headers, " ")
+				}
+				inFirstRow = false
+			case "v", "t":
+				inValue = false
+			}
+		case xml.CharData:
+			if !inValue {
+				continue
+			}
+			value := strings.TrimSpace(string(t))
+			if value == "" {
+				continue
+			}
+			if cellType == "s" {
+				if idx, ok := parseSharedStringIndex(value, len(shared)); ok {
+					value = shared[idx]
+				}
+			}
+			if value != "" {
+				headers = append(headers, value)
+			}
+		}
+	}
+	return strings.Join(headers, " ")
+}
+
+func xlsxSharedStrings(files []*zip.File) []string {
+	data := readZipFile(files, "xl/sharedStrings.xml")
+	if data == "" {
+		return nil
+	}
+
+	decoder := xml.NewDecoder(strings.NewReader(data))
+	var (
+		inText bool
+		items  []string
+	)
+	for {
+		token, err := decoder.Token()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return items
+		}
+		switch t := token.(type) {
+		case xml.StartElement:
+			if strings.ToLower(t.Name.Local) == "t" {
+				inText = true
+			}
+		case xml.EndElement:
+			if strings.ToLower(t.Name.Local) == "t" {
+				inText = false
+			}
+		case xml.CharData:
+			if inText {
+				items = append(items, strings.TrimSpace(string(t)))
+			}
+		}
+	}
+	return items
+}
+
+func parseSharedStringIndex(value string, max int) (int, bool) {
+	var idx int
+	if _, err := fmt.Sscanf(value, "%d", &idx); err != nil {
+		return 0, false
+	}
+	return idx, idx >= 0 && idx < max
+}
+
+func pptxSlideTitles(files []*zip.File) []string {
+	var titles []string
+	for _, file := range files {
+		if !strings.HasPrefix(file.Name, "ppt/slides/slide") || !strings.HasSuffix(file.Name, ".xml") {
+			continue
+		}
+		text := xmlText(readZipFile(files, file.Name))
+		if text == "" {
+			continue
+		}
+		words := strings.Fields(text)
+		if len(words) > 12 {
+			words = words[:12]
+		}
+		titles = append(titles, strings.Join(words, " "))
+	}
+	return titles
+}
+
 func readZipFile(files []*zip.File, name string) string {
 	for _, file := range files {
 		if file.Name != name {
@@ -182,7 +375,10 @@ func xmlText(data string) string {
 			break
 		}
 		if err != nil {
-			return strings.Join(parts, " ")
+			if len(parts) > 0 {
+				return strings.Join(parts, " ")
+			}
+			return xmlTextByTagStripping(data)
 		}
 		if t, ok := token.(xml.CharData); ok {
 			value := strings.TrimSpace(string(t))
@@ -194,7 +390,18 @@ func xmlText(data string) string {
 	if len(parts) > 200 {
 		parts = parts[:200]
 	}
-	return fmt.Sprint(strings.Join(parts, " "))
+	text := fmt.Sprint(strings.Join(parts, " "))
+	if strings.TrimSpace(text) != "" {
+		return text
+	}
+	return xmlTextByTagStripping(data)
+}
+
+func xmlTextByTagStripping(data string) string {
+	tag := regexp.MustCompile(`<[^>]+>`)
+	text := tag.ReplaceAllString(data, " ")
+	text = strings.Join(strings.Fields(text), " ")
+	return text
 }
 
 func init() { Register(officeExtractor{}) }

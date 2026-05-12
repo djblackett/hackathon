@@ -54,8 +54,20 @@ func sourceWeight(source string) float64 {
 		return 0.95
 	case "media-tags":
 		return 0.9
+	case "media-filename":
+		return 0.7
+	case "media-date":
+		return 0.56
+	case "media-properties":
+		return 0.35
 	case "office-subject":
 		return 0.88
+	case "office-slide-title":
+		return 0.88
+	case "office-headers":
+		return 0.86
+	case "office-sheet-name":
+		return 0.78
 	case "markdown-heading", "html-h1":
 		return 0.9
 	case "image-exif-title", "image-exif-description", "image-exif-imagedescription", "image-exif-objectname":
@@ -104,7 +116,7 @@ func evidencePenalty(text string) float64 {
 		penalty += 0.5
 	}
 	if looksRandom(text) {
-		penalty += 0.25
+		penalty += 0.55
 	}
 	if len(text) > 1200 {
 		penalty += 0.1
@@ -134,10 +146,12 @@ func looksRandom(s string) bool {
 	letters := 0
 	vowels := 0
 	digits := 0
+	upper := 0
+	lower := 0
 	longestRun := 0
 	currentRun := 0
 
-	for _, r := range strings.ToLower(s) {
+	for _, r := range s {
 		switch {
 		case unicode.IsDigit(r):
 			digits++
@@ -145,7 +159,13 @@ func looksRandom(s string) bool {
 		case unicode.IsLetter(r):
 			letters++
 			currentRun++
-			if strings.ContainsRune("aeiou", r) {
+			if unicode.IsUpper(r) {
+				upper++
+			}
+			if unicode.IsLower(r) {
+				lower++
+			}
+			if strings.ContainsRune("aeiou", unicode.ToLower(r)) {
 				vowels++
 			}
 		default:
@@ -162,7 +182,32 @@ func looksRandom(s string) bool {
 	if digits >= 4 && digits >= letters {
 		return true
 	}
+	if hasRandomMixedToken(s) {
+		return true
+	}
 	return longestRun >= 18
+}
+
+func hasRandomMixedToken(s string) bool {
+	for _, token := range strings.FieldsFunc(s, func(r rune) bool {
+		return !unicode.IsLetter(r) && !unicode.IsDigit(r)
+	}) {
+		if len(token) < 12 {
+			continue
+		}
+		hasUpper := false
+		hasLower := false
+		hasDigit := false
+		for _, r := range token {
+			hasUpper = hasUpper || unicode.IsUpper(r)
+			hasLower = hasLower || unicode.IsLower(r)
+			hasDigit = hasDigit || unicode.IsDigit(r)
+		}
+		if hasUpper && hasLower && hasDigit {
+			return true
+		}
+	}
+	return false
 }
 
 func clamp(value, min, max float64) float64 {

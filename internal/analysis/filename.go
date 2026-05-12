@@ -18,12 +18,15 @@ type FilenameSuggestion struct {
 	Reason     string
 }
 
+const minimumLocalEvidenceScore = 0.4
+
 var wordPattern = regexp.MustCompile(`[a-zA-Z0-9]+`)
 
 var stopWords = map[string]struct{}{
 	"a": {}, "an": {}, "and": {}, "are": {}, "as": {}, "at": {}, "be": {}, "by": {},
-	"for": {}, "from": {}, "in": {}, "is": {}, "it": {}, "of": {}, "on": {}, "or": {},
-	"the": {}, "this": {}, "to": {}, "with": {},
+	"audio": {},
+	"for":   {}, "from": {}, "in": {}, "is": {}, "it": {}, "of": {}, "on": {}, "or": {},
+	"the": {}, "this": {}, "to": {}, "video": {}, "with": {},
 }
 
 var genericWords = map[string]struct{}{
@@ -35,8 +38,11 @@ func GenerateFilename(info extractors.ExtractedFileInfo) FilenameSuggestion {
 	samples := RankEvidence(info)
 
 	for _, sample := range samples {
+		if sample.Score < minimumLocalEvidenceScore {
+			continue
+		}
 		words := meaningfulWords(sample.Text, 8)
-		if len(words) < 2 {
+		if len(words) < 2 && !allowSingleWordEvidence(sample.Source, words) {
 			continue
 		}
 
@@ -71,6 +77,10 @@ func GenerateFilename(info extractors.ExtractedFileInfo) FilenameSuggestion {
 		Method:     "metadata",
 		Reason:     "no strong local evidence found",
 	}
+}
+
+func allowSingleWordEvidence(source string, words []string) bool {
+	return source == "media-filename" && len(words) == 1 && len(words[0]) >= 4
 }
 
 func CompactEvidence(info extractors.ExtractedFileInfo, maxChars int) string {
