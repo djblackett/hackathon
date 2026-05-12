@@ -15,6 +15,7 @@ import (
 	"github.com/djblackett/bootdev-hackathon/internal/analysis"
 	"github.com/djblackett/bootdev-hackathon/internal/config"
 	"github.com/djblackett/bootdev-hackathon/internal/extractors"
+	"github.com/djblackett/bootdev-hackathon/internal/report"
 	"github.com/djblackett/bootdev-hackathon/internal/utils"
 )
 
@@ -26,7 +27,7 @@ func main() {
 	cfg := config.FromEnv()
 
 	// Reasonable default extensions; can be overridden with --types "csv,html,…".
-	defaultFileTypes := []string{"txt", "md", "csv", "pdf", "json", "html", "log", "cfg", "ini"}
+	defaultFileTypes := []string{"txt", "md", "csv", "pdf", "json", "html", "log", "cfg", "ini", "docx", "xlsx", "pptx", "office", "eml", "email", "image", "media"}
 
 	// Define CLI application.
 	app := &cli.App{
@@ -83,6 +84,10 @@ func main() {
 				Value: 2000,
 				Usage: "maximum compact evidence characters sent to AI in auto mode",
 			},
+			&cli.StringFlag{
+				Name:  "report",
+				Usage: "write a JSON report of processed files",
+			},
 			&cli.StringSliceFlag{ // allowed extensions. Overrides defaultFileTypes.
 				Name:  "types",
 				Value: cli.NewStringSlice(defaultFileTypes...),
@@ -102,6 +107,7 @@ func main() {
 			strategy := c.String("strategy")
 			confidenceThreshold := c.Float64("confidence-threshold")
 			maxAIChars := c.Int("max-ai-chars")
+			reportPath := c.String("report")
 
 			switch strategy {
 			case "auto", "metadata-only", "ai-only":
@@ -139,6 +145,10 @@ func main() {
 			// Concurrency helpers.
 			var wg sync.WaitGroup
 			errChan := make(chan error, 100) // buffered to avoid blocking goroutines.
+			var outputMu sync.Mutex
+			reservedPaths := map[string]struct{}{}
+			var reportMu sync.Mutex
+			reportEntries := []report.Entry{}
 
 			// processFile runs in its own goroutine per file.
 			processFile := func(info extractors.ExtractedFileInfo) {
@@ -149,6 +159,7 @@ func main() {
 				suggested := suggestion.Filename
 				method := suggestion.Method
 				confidence := suggestion.Confidence
+				evidence := append([]string(nil), suggestion.Evidence...)
 
 				if strategy == "ai-only" || (strategy == "auto" && confidence < confidenceThreshold) {
 					client, err := getAIClient()
@@ -188,14 +199,44 @@ func main() {
 					ext = "." + info.SuggestedExtension
 				}
 
+				var destPath string
+				if renameMode {
+					planned := filepath.Join(filepath.Dir(path), sanitized+ext)
+					outputMu.Lock()
+					destPath = utils.UniquePath(planned, reservedPaths)
+					outputMu.Unlock()
+				} else {
+					planned, err := utils.DestinationPath(input, path, output, sanitized, ext, flatten)
+					if err != nil {
+						errChan <- err
+						return
+					}
+					outputMu.Lock()
+					destPath = utils.UniquePath(planned, reservedPaths)
+					outputMu.Unlock()
+				}
+
+				reportMu.Lock()
+				reportEntries = append(reportEntries, report.Entry{
+					SourcePath:      path,
+					DestinationPath: destPath,
+					SuggestedName:   sanitized + ext,
+					Method:          method,
+					Confidence:      confidence,
+					Evidence:        evidence,
+					Warnings:        append([]string(nil), info.Warnings...),
+					DryRun:          dry,
+				})
+				reportMu.Unlock()
+
 				// Depending on flags, perform or log the operation.
 				switch {
 				case dry && !renameMode:
-					log.Printf("[DRY] %s  →  %s/%s method=%s confidence=%.2f\n", path, output, sanitized+ext, method, confidence)
+					log.Printf("[DRY] %s  →  %s method=%s confidence=%.2f\n", path, destPath, method, confidence)
 				case dry && renameMode:
-					log.Printf("[DRY] %s  →  %s method=%s confidence=%.2f\n", path, sanitized+ext, method, confidence)
+					log.Printf("[DRY] %s  →  %s method=%s confidence=%.2f\n", path, destPath, method, confidence)
 				case !renameMode:
-					if err := utils.CopyFileWithExtension(input, path, output, sanitized, ext, flatten); err != nil {
+					if err := utils.CopyFileToPath(path, destPath); err != nil {
 						errChan <- err
 					}
 				default: // rename in place
@@ -217,6 +258,10 @@ func main() {
 			// Wait for all processing to complete, then close channel so range terminates.
 			wg.Wait()
 			close(errChan)
+
+			if err := report.Write(reportPath, reportEntries); err != nil {
+				return err
+			}
 
 			var (
 				firstErr error   // keeps behaviour for non‑debug

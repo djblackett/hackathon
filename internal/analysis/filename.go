@@ -151,9 +151,11 @@ func splitCompoundWords(s string) string {
 
 func metadataSource(source string) bool {
 	return strings.Contains(source, "title") ||
+		strings.Contains(source, "subject") ||
 		strings.Contains(source, "heading") ||
 		strings.Contains(source, "headers") ||
-		strings.Contains(source, "keys")
+		strings.Contains(source, "keys") ||
+		strings.Contains(source, "tags")
 }
 
 func trimForEvidence(s string, max int) string {

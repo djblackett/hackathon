@@ -50,10 +50,16 @@ func RankEvidence(info extractors.ExtractedFileInfo) []RankedEvidence {
 
 func sourceWeight(source string) float64 {
 	switch source {
-	case "html-title", "json-title-field":
+	case "html-title", "json-title-field", "office-title", "email-subject":
 		return 0.95
+	case "media-tags":
+		return 0.9
+	case "office-subject":
+		return 0.88
 	case "markdown-heading", "html-h1":
 		return 0.9
+	case "image-exif-title", "image-exif-description", "image-exif-imagedescription", "image-exif-objectname":
+		return 0.88
 	case "csv-headers":
 		return 0.86
 	case "html-meta-description":
@@ -62,8 +68,12 @@ func sourceWeight(source string) float64 {
 		return 0.78
 	case "pdf-first-text":
 		return 0.72
+	case "office-text":
+		return 0.68
 	case "first-meaningful-line":
 		return 0.58
+	case "image-properties":
+		return 0.42
 	case "content":
 		return 0.35
 	default:

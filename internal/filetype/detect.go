@@ -48,6 +48,8 @@ func Detect(path string) Detection {
 	case bytes.HasPrefix(sample, []byte("%PDF-")):
 		detection.Type = "pdf"
 		detection.CanonicalExtension = "pdf"
+	case isImageSignature(sample):
+		detection.Type = "image"
 	case bytes.HasPrefix(sample, []byte("PK\x03\x04")):
 		detection.Type, detection.Subtype = detectZipContainer(path)
 	default:
@@ -88,12 +90,14 @@ func detectTextLike(sample []byte, ext string) string {
 		return extensionFallback(ext)
 	}
 	if !utf8.Valid(trimmed) || mostlyBinary(trimmed) {
-		return "unknown"
+		return binaryExtensionFallback(ext)
 	}
 
 	lower := strings.ToLower(string(trimmed))
 
 	switch {
+	case ext == "eml" || looksEmail(lower):
+		return "email"
 	case json.Valid(trimmed):
 		return "json"
 	case looksHTML(lower):
@@ -103,8 +107,17 @@ func detectTextLike(sample []byte, ext string) string {
 	case ext == "csv" || looksCSV(string(trimmed)):
 		return "csv"
 	default:
+		if ext == "" {
+			return "text"
+		}
 		return extensionFallback(ext)
 	}
+}
+
+func looksEmail(s string) bool {
+	s = "\n" + s
+	return strings.Contains(s, "\nsubject:") &&
+		(strings.Contains(s, "\nfrom:") || strings.Contains(s, "\nto:"))
 }
 
 func extensionFallback(ext string) string {
@@ -121,8 +134,29 @@ func extensionFallback(ext string) string {
 		return "html"
 	case "pdf":
 		return "pdf"
+	case "eml":
+		return "email"
+	case "jpg", "jpeg", "png", "gif":
+		return "image"
+	case "mp3", "mp4", "m4a", "mov", "wav", "flac", "mkv", "avi":
+		return "media"
+	case "docx", "xlsx", "pptx":
+		return "office"
 	default:
-		return "text"
+		return "unknown"
+	}
+}
+
+func binaryExtensionFallback(ext string) string {
+	switch ext {
+	case "mp3", "mp4", "m4a", "mov", "wav", "flac", "mkv", "avi":
+		return "media"
+	case "docx", "xlsx", "pptx":
+		return "office"
+	case "jpg", "jpeg", "png", "gif":
+		return "image"
+	default:
+		return "unknown"
 	}
 }
 
@@ -184,6 +218,13 @@ func looksCSV(s string) bool {
 	return records > 0
 }
 
+func isImageSignature(sample []byte) bool {
+	return bytes.HasPrefix(sample, []byte{0xFF, 0xD8, 0xFF}) ||
+		bytes.HasPrefix(sample, []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1A, '\n'}) ||
+		bytes.HasPrefix(sample, []byte("GIF87a")) ||
+		bytes.HasPrefix(sample, []byte("GIF89a"))
+}
+
 func canonicalExtension(detectedType, subtype, originalExt string) string {
 	switch detectedType {
 	case "pdf":
@@ -198,6 +239,15 @@ func canonicalExtension(detectedType, subtype, originalExt string) string {
 		return "md"
 	case "office":
 		return subtype
+	case "email":
+		return "eml"
+	case "image":
+		if originalExt == "jpg" || originalExt == "jpeg" || originalExt == "png" || originalExt == "gif" {
+			return originalExt
+		}
+		return "img"
+	case "media":
+		return originalExt
 	case "text":
 		if originalExt == "log" || originalExt == "cfg" || originalExt == "ini" || originalExt == "txt" {
 			return originalExt

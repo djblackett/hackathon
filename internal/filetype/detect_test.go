@@ -74,6 +74,29 @@ func TestDetectUnknownBinary(t *testing.T) {
 	}
 }
 
+func TestDetectEmail(t *testing.T) {
+	path := writeTestFile(t, "message", "Subject: Recovery Plan\nFrom: ops@example.com\nTo: team@example.com\n\nBody")
+
+	got := Detect(path)
+
+	if got.Type != "email" {
+		t.Fatalf("Type = %q, want email", got.Type)
+	}
+}
+
+func TestDetectMediaByExtension(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "clip.mp3")
+	if err := os.WriteFile(path, []byte{0x00, 0x01, 0x02, 0x03}, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	got := Detect(path)
+
+	if got.Type != "media" {
+		t.Fatalf("Type = %q, want media", got.Type)
+	}
+}
+
 func writeTestFile(t *testing.T, name, content string) string {
 	t.Helper()
 

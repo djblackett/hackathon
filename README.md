@@ -70,7 +70,7 @@ A web server that provides AI filename suggestion services via HTTP API, deploya
 
 ## Features
 
-- **Multi-format support:** Scans `.txt`, `.md`, `.pdf`, `.json`, `.log`, `.cfg`, and `.ini` files, with more planned.
+- **Multi-format support:** Scans text, Markdown, CSV, PDF, JSON, HTML, config/log files, Office documents, email files, image metadata, and media metadata.
 - **Flexible AI backends:** Supports direct OpenAI, local Ollama, and a remote Fly.io server.
 - **Clean naming:** Generates kebab-case filenames based on file content.
 - **Privacy-focused local mode:** Local Ollama mode keeps all file content on your machine.
@@ -149,7 +149,7 @@ go run ./cmd/client/main.go --input ./files/input --dry-run
 |------|-------------|---------|
 | `--input` | Directory to scan for files | `files/input` |
 | `--output` | Output directory for processed files | `files/output` |
-| `--types` | File extensions or detected content types to process (comma-separated) | `txt,md,csv,pdf,json,html,log,cfg,ini` |
+| `--types` | File extensions or detected content types to process (comma-separated) | `txt,md,csv,pdf,json,html,log,cfg,ini,docx,xlsx,pptx,office,eml,email,image,media` |
 | `--local` | Use local Ollama instead of OpenAI | `false` |
 | `--model` | AI model name | `gpt-3.5-turbo` (OpenAI) / `mistral` (Ollama) |
 | `--dry-run` | Preview changes without processing | `false` |
@@ -159,6 +159,7 @@ go run ./cmd/client/main.go --input ./files/input --dry-run
 | `--strategy` | Rename strategy: `auto`, `metadata-only`, or `ai-only` | `auto` |
 | `--confidence-threshold` | Minimum local confidence before `auto` skips AI fallback | `0.75` |
 | `--max-ai-chars` | Maximum compact evidence characters sent to AI in `auto` mode | `2000` |
+| `--report` | Write a JSON report of processed files | none |
 
 ### Examples
 
@@ -180,6 +181,9 @@ go run ./cmd/client/main.go --input ./files/input --dry-run
 
 # Use metadata first, then compact AI fallback for ambiguous files
 ./ai-renamer --input ./documents --strategy auto --confidence-threshold 0.8
+
+# Preview changes and write an audit report
+./ai-renamer --input ./documents --strategy metadata-only --dry-run --report report.json
 
 # Copy to custom output directory with flattened structure
 ./ai-renamer --input ./files --output ./renamed --flatten

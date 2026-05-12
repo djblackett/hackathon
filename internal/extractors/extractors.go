@@ -109,7 +109,9 @@ func applyDetection(info *ExtractedFileInfo, detection filetype.Detection) {
 	if info.Extension == "" {
 		info.Extension = detection.Extension
 	}
-	info.SuggestedExtension = detection.CanonicalExtension
+	if info.SuggestedExtension == "" || info.SuggestedExtension == info.Extension {
+		info.SuggestedExtension = detection.CanonicalExtension
+	}
 	if info.Metadata == nil {
 		info.Metadata = map[string]string{}
 	}
