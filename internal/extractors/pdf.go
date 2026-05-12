@@ -32,4 +32,29 @@ func (pdfExtractor) Extract(path string) (string, error) {
 	return content, nil
 }
 
+func (pdfExtractor) ExtractInfo(path string) (ExtractedFileInfo, error) {
+	content, err := pdfExtractor{}.Extract(path)
+	if err != nil {
+		return ExtractedFileInfo{}, err
+	}
+
+	info := NewExtractedFileInfo(path, content)
+	info.DetectedType = "pdf"
+
+	for _, line := range strings.Split(content, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		info.TextSamples = append([]TextSample{{
+			Source: "pdf-first-text",
+			Text:   line,
+			Score:  0.7,
+		}}, info.TextSamples...)
+		break
+	}
+
+	return info, nil
+}
+
 func init() { Register(pdfExtractor{}) }

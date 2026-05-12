@@ -1,24 +1,24 @@
 # AI File Renamer
 
-AI File Renamer is a CLI tool for automatically renaming files based on their content using AI. Inspired by a real life need, the primary usecase is for poorly named files and especially files recovered from a broken filesystem. It supports three backends: direct OpenAI API, local Ollama, or a remote Fly.io server.
+AI File Renamer is a CLI tool for automatically renaming files based on their content. It was inspired by a real-life need: cleaning up poorly named files, especially files recovered from a broken filesystem.
 
-## 📑 Table of Contents
+It supports three backends: the OpenAI API, local Ollama, and a remote Fly.io server.
 
-- [🏆 Boot.Dev Hackathon](#bootdev-hackathon)
-- [🏗️ Architecture](#️-architecture)
-- [✨ Features](#-features)
-- [🚀 Quick Start](#-quick-start)
-- [🔧 CLI Options](#-cli-options)
-- [🌐 API Reference](#-api-reference)
-- [🔐 Privacy & Security](#-privacy--security)
-- [🚀 Deployment](#-deployment)
-- [⚙️ DevOps](#️-devops)
-- [🛠️ Roadmap](#️-roadmap)
-- [🤝 Contributing](#-contributing)
-- [📄 License](#-license)
-- [🙏 Acknowledgments](#-acknowledgments)
+## Table of Contents
 
----
+- [Boot.Dev Hackathon](#bootdev-hackathon)
+- [Architecture](#architecture)
+- [Features](#features)
+- [Quick Start](#quick-start)
+- [CLI Options](#cli-options)
+- [API Reference](#api-reference)
+- [Privacy and Security](#privacy-and-security)
+- [Deployment](#deployment)
+- [DevOps](#devops)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
+- [License](#license)
+- [Acknowledgments](#acknowledgments)
 
 ## Boot.Dev Hackathon
 
@@ -28,7 +28,7 @@ I completed this project for the [Boot.Dev](https://www.boot.dev/) July 2025 Hac
 
 This project was developed with AI assistance to accelerate development. While the initial Go code structure was generated using ChatGPT, the codebase has undergone significant evolution through iterative development, debugging, and feature expansion. Having completed all Go courses and projects on Boot.Dev, I approached this as coding efficiently rather than "vibe coding". I can explain and maintain all components of the codebase.
 
-**Note**: AI tools proved less effective for DevOps configurations, with approximately 25% of responses being directly usable. Manual expertise was essential for the deployment and infrastructure components.
+**Note:** AI tools were less effective for DevOps configuration, with roughly 25% of responses being directly usable. Manual expertise was essential for the deployment and infrastructure components.
 
 ### Project Reflections
 
@@ -52,48 +52,44 @@ I may have over-engineered the DevOps infrastructure, but Lane's emphasis on mak
 
 The final result exceeded my initial expectations, providing a tool that's not only useful for my original problem but could serve a broader community of developers dealing with file organization challenges. The modular architecture and multiple AI backend options create a foundation for future enhancements and community contributions.
 
-## 🏗️ Architecture
+## Architecture
 
 This project provides a unified CLI tool with three different AI backend options:
 
-### 📱 CLI Client (`cmd/client/`)
+### CLI Client (`cmd/client/`)
 
 A command-line tool that scans directories for poorly named files and uses AI to suggest better filenames based on content. The CLI can operate in three modes:
 
-1. **🔗 Direct OpenAI Mode**: When `OPENAI_API_KEY` is provided, communicates directly with OpenAI APIs
-2. **🏠 Local Ollama Mode**: Use `--local` flag to process files with a local Ollama instance for privacy
-3. **☁️ Remote Server Mode**: Defaults to using a remote AI service deployed on Fly.io when no API key is available
+1. **Direct OpenAI mode:** When `OPENAI_API_KEY` is provided, the CLI communicates directly with the OpenAI API.
+2. **Local Ollama mode:** Use the `--local` flag to process files with a local Ollama instance.
+3. **Remote server mode:** When no API key is available, the CLI defaults to a remote AI service deployed on Fly.io.
 
-### 🌐 Server API (`cmd/server/`)
+### Server API (`cmd/server/`)
 
 A web server that provides AI filename suggestion services via HTTP API, deployable to cloud platforms like Fly.io. This serves as the backend for the remote server mode.
 
----
+## Features
 
-## ✨ Features
+- **Multi-format support:** Scans `.txt`, `.md`, `.pdf`, `.json`, `.log`, `.cfg`, and `.ini` files, with more planned.
+- **Flexible AI backends:** Supports direct OpenAI, local Ollama, and a remote Fly.io server.
+- **Clean naming:** Generates kebab-case filenames based on file content.
+- **Privacy-focused local mode:** Local Ollama mode keeps all file content on your machine.
+- **GPU acceleration:** Supports NVIDIA GPUs for faster local Ollama processing.
+- **Plugin architecture:** The modular extractor system makes adding new file types straightforward.
+- **Easy deployment:** The CLI selects a backend automatically based on configuration.
+- **Concurrent processing:** Batch processing supports configurable concurrency.
+- **Smart filtering:** Already well-named files can be skipped automatically.
 
-- 📁 **Multi-format support**: Scans `.txt`, `.md`, `.pdf`, `.json`, `.log`, `.cfg`, `.ini` files (more to come)
-- 🧠 **Flexible AI backends**: Three modes - Direct OpenAI, Local Ollama, or Remote Fly.io server
-- 🗂️ **Clean naming**: Generates kebab-case filenames following best practices
-- 🛡️ **Privacy-focused**: Local Ollama mode keeps all data on your machine
-- 🚀 **GPU acceleration**: NVIDIA GPU support for faster local Ollama processing
-- 🔌 **Plugin architecture**: Modular extractor system makes adding new file types straightforward
-- ⚙️ **Easy deployment**: Simple CLI with automatic backend selection
-- 🔄 **Concurrent processing**: Efficient batch processing with configurable concurrency
-- 🎯 **Smart filtering**: Skip already well-named files automatically
-
----
-
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
 - [Go](https://go.dev/) 1.24+
 - [Docker](https://docker.com/)
-- [jq](https://jqlang.org/) - if docker is not used
-- [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/index.html) - optional GPU acceleration (requires an NVIDIA GPU) - [Instructions](https://itsfoss.com/ollama-docker/)
+- [jq](https://jqlang.org/), if Docker is not used
+- [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/index.html), optional for GPU acceleration with an NVIDIA GPU
 
-### 1. Clone and Setup
+### 1. Clone and Set Up
 
 ```bash
 git clone https://github.com/djblackett/bootdev-hackathon.git
@@ -102,15 +98,15 @@ go mod download
 mv -n .env.example .env
 ```
 
-### Quick Start (Recommended)
+### Recommended Path
 
-For the fastest experience, simply put your files in the `files/input/` folder and run:
+For the fastest path, put files in `files/input/` and run the client:
 
 ```bash
-# Put your files here (or use provided sample files)
+# Put your files here, or use the provided sample files
 cp /path/to/your/files/* files/input/
 
-# Run with default settings (uses remote server)
+# Run with default settings. This uses the remote server.
 go run ./cmd/client/main.go
 
 # Renamed files will appear in files/output/
@@ -118,7 +114,7 @@ go run ./cmd/client/main.go
 
 ### 2. Choose Your Backend
 
-#### Option A: Remote Server (No setup required)
+#### Option A: Remote Server
 
 ```bash
 # Uses remote Fly.io server automatically
@@ -138,7 +134,7 @@ docker exec -it ollama ollama pull mistral
 go run ./cmd/client/main.go --input ./files/input --local --model mistral --dry-run
 ```
 
-> **💡 Tip**: For GPU acceleration or detailed privacy setup, see the [Privacy & Security](#-privacy--security) section.
+For GPU acceleration or a more detailed privacy setup, see [Privacy and Security](#privacy-and-security).
 
 #### Option C: Direct OpenAI
 
@@ -147,21 +143,22 @@ go run ./cmd/client/main.go --input ./files/input --local --model mistral --dry-
 go run ./cmd/client/main.go --input ./files/input --dry-run
 ```
 
----
-
-## 🔧 CLI Options
+## CLI Options
 
 | Flag | Description | Default |
 |------|-------------|---------|
 | `--input` | Directory to scan for files | `files/input` |
 | `--output` | Output directory for processed files | `files/output` |
-| `--types` | File extensions to process (comma-separated) | `txt,md,log,cfg,ini,pdf,json` |
+| `--types` | File extensions to process (comma-separated) | `txt,md,csv,pdf,json,html,log,cfg,ini` |
 | `--local` | Use local Ollama instead of OpenAI | `false` |
 | `--model` | AI model name | `gpt-3.5-turbo` (OpenAI) / `mistral` (Ollama) |
 | `--dry-run` | Preview changes without processing | `false` |
 | `--rename` | Rename files in place instead of copying to output | `false` |
 | `--debug` | Return all errors joined together | `false` |
 | `--flatten` | Flatten output directory structure | `false` |
+| `--strategy` | Rename strategy: `auto`, `metadata-only`, or `ai-only` | `auto` |
+| `--confidence-threshold` | Minimum local confidence before `auto` skips AI fallback | `0.75` |
+| `--max-ai-chars` | Maximum compact evidence characters sent to AI in `auto` mode | `2000` |
 
 ### Examples
 
@@ -178,6 +175,12 @@ go run ./cmd/client/main.go --input ./files/input --dry-run
 # Preview only, specific file types
 ./ai-renamer --input ./logs --types "log,txt" --dry-run
 
+# Use local metadata and text evidence only
+./ai-renamer --input ./documents --strategy metadata-only --dry-run
+
+# Use metadata first, then compact AI fallback for ambiguous files
+./ai-renamer --input ./documents --strategy auto --confidence-threshold 0.8
+
 # Copy to custom output directory with flattened structure
 ./ai-renamer --input ./files --output ./renamed --flatten
 
@@ -188,9 +191,7 @@ go run ./cmd/client/main.go --input ./files/input --dry-run
 ./ai-renamer --input ./documents --rename
 ```
 
----
-
-## 🌐 API Reference
+## API Reference
 
 The server provides RESTful endpoints for AI filename suggestions:
 
@@ -231,9 +232,7 @@ curl -X POST https://hackathon-rough-sunset-2856.fly.dev/suggest-filename \
   -d '{"content": "Meeting notes from quarterly review...", "model": "gpt-4o"}'
 ```
 
----
-
-## 🔐 Privacy & Security
+## Privacy and Security
 
 ### Local Mode for Sensitive Files
 
@@ -252,9 +251,7 @@ docker compose -f ollama.docker-compose.yaml up ollama
 
 This ensures no file content is sent to external APIs.
 
----
-
-## 🚀 Deployment
+## Deployment
 
 ### Server Deployment
 
@@ -263,22 +260,18 @@ This ensures no file content is sent to external APIs.
 fly deploy
 ```
 
----
-
-## ⚙️ DevOps
+## DevOps
 
 This project includes comprehensive DevOps configurations:
 
-- **🐳 Docker**: Multi-stage Dockerfiles for both client and server components
-- **🔄 GitHub Actions**: Automated Docker Hub publishing on version tags
-- **☸️ Kubernetes**: Ready-to-deploy K8s manifests in `k8s-deployment.yaml`
-- **🐙 Docker Compose**: Local development with Ollama integration
+- **Docker:** Multi-stage Dockerfiles for both client and server components.
+- **GitHub Actions:** Automated Docker Hub publishing on version tags.
+- **Kubernetes:** Ready-to-deploy Kubernetes manifests in `k8s-deployment.yaml`.
+- **Docker Compose:** Local development with Ollama integration.
 
----
+## Roadmap
 
-## 🛠️ Roadmap
-
-### Current Features ✅
+### Current Features
 
 - [x] CLI file renaming
 - [x] OpenAI integration
@@ -288,7 +281,7 @@ This project includes comprehensive DevOps configurations:
 - [x] Fly.io deployment
 - [x] Kubernetes deployment config
 
-### Planned Enhancements 🔄
+### Planned Enhancements
 
 - [ ] OCR for scanned documents
 - [ ] Whisper integration for parsing voice recordings
@@ -297,9 +290,7 @@ This project includes comprehensive DevOps configurations:
 - [ ] File deduplication
 - [ ] Automatic language detection
 
----
-
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
@@ -307,16 +298,12 @@ This project includes comprehensive DevOps configurations:
 4. Push to branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
----
+## License
 
-## 📄 License
+This project is licensed under the MIT License.
 
-This project is licensed under the MIT License
+## Acknowledgments
 
----
-
-## 🙏 Acknowledgments
-
-- Built for the [Boot.dev](https://boot.dev) Hackathon ✨
-- Powered by [OpenAI](https://openai.com) and [Ollama](https://ollama.com)
-- OCR support via [Tesseract](https://github.com/tesseract-ocr/tesseract)
+- Built for the [Boot.dev](https://boot.dev) Hackathon.
+- Powered by [OpenAI](https://openai.com) and [Ollama](https://ollama.com).
+- OCR support via [Tesseract](https://github.com/tesseract-ocr/tesseract).

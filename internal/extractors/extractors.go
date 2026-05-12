@@ -41,3 +41,41 @@ func Walk(dir string, types map[string]struct{}, fn func(string, string) error) 
 		return nil
 	})
 }
+
+// WalkInfo walks over dir and returns structured extraction output for each
+// supported file. Existing extractors can opt into richer metadata by
+// implementing InfoExtractor; otherwise the plain extracted content is wrapped.
+func WalkInfo(dir string, types map[string]struct{}, fn func(ExtractedFileInfo) error) error {
+	fmt.Printf("Registered extractors: %d\n", len(registered))
+	return filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+
+		ext := strings.TrimPrefix(strings.ToLower(filepath.Ext(path)), ".")
+		if _, ok := types[ext]; !ok {
+			return nil
+		}
+
+		for _, ex := range registered {
+			if !ex.CanHandle(path) {
+				continue
+			}
+
+			if infoEx, ok := ex.(InfoExtractor); ok {
+				info, err := infoEx.ExtractInfo(path)
+				if err != nil {
+					return err
+				}
+				return fn(info)
+			}
+
+			content, err := ex.Extract(path)
+			if err != nil {
+				return err
+			}
+			return fn(NewExtractedFileInfo(path, content))
+		}
+		return nil
+	})
+}

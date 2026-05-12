@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -11,6 +12,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/djblackett/bootdev-hackathon/internal/ai"
+	"github.com/djblackett/bootdev-hackathon/internal/analysis"
 	"github.com/djblackett/bootdev-hackathon/internal/config"
 	"github.com/djblackett/bootdev-hackathon/internal/extractors"
 	"github.com/djblackett/bootdev-hackathon/internal/utils"
@@ -66,6 +68,21 @@ func main() {
 				Value: false,
 				Usage: "flatten output directory structure",
 			},
+			&cli.StringFlag{
+				Name:  "strategy",
+				Value: "auto",
+				Usage: "rename strategy: auto, metadata-only, or ai-only",
+			},
+			&cli.Float64Flag{
+				Name:  "confidence-threshold",
+				Value: 0.75,
+				Usage: "minimum local confidence before auto mode skips AI fallback",
+			},
+			&cli.IntFlag{
+				Name:  "max-ai-chars",
+				Value: 2000,
+				Usage: "maximum compact evidence characters sent to AI in auto mode",
+			},
 			&cli.StringSliceFlag{ // allowed extensions. Overrides defaultFileTypes.
 				Name:  "types",
 				Value: cli.NewStringSlice(defaultFileTypes...),
@@ -82,6 +99,15 @@ func main() {
 			renameMode := c.Bool("rename")
 			debug := c.Bool("debug")
 			flatten := c.Bool("flatten")
+			strategy := c.String("strategy")
+			confidenceThreshold := c.Float64("confidence-threshold")
+			maxAIChars := c.Int("max-ai-chars")
+
+			switch strategy {
+			case "auto", "metadata-only", "ai-only":
+			default:
+				return fmt.Errorf("invalid strategy %q: use auto, metadata-only, or ai-only", strategy)
+			}
 
 			// Build a set[string]struct{} for O(1) membership tests during walk.
 			types := make(map[string]struct{})
@@ -97,10 +123,17 @@ func main() {
 				defaultModel = "gpt-3.5-turbo"
 			}
 
-			// Spin up LLM client once; reused by all goroutines.
-			client, err := ai.NewClient(cfg, local, defaultModel)
-			if err != nil {
-				return err
+			var (
+				client     ai.Client
+				clientErr  error
+				clientOnce sync.Once
+			)
+			getAIClient := func() (ai.Client, error) {
+				clientOnce.Do(func() {
+					// Spin up LLM client once; reused by all goroutines.
+					client, clientErr = ai.NewClient(cfg, local, defaultModel)
+				})
+				return client, clientErr
 			}
 
 			// Concurrency helpers.
@@ -108,14 +141,37 @@ func main() {
 			errChan := make(chan error, 100) // buffered to avoid blocking goroutines.
 
 			// processFile runs in its own goroutine per file.
-			processFile := func(path, content string) {
+			processFile := func(info extractors.ExtractedFileInfo) {
 				defer wg.Done()
 
-				// Ask the model for a descriptive filename.
-				suggested, err := client.SuggestFilename(content)
-				if err != nil {
-					errChan <- err
-					return
+				path := info.Path
+				suggestion := analysis.GenerateFilename(info)
+				suggested := suggestion.Filename
+				method := suggestion.Method
+				confidence := suggestion.Confidence
+
+				if strategy == "ai-only" || (strategy == "auto" && confidence < confidenceThreshold) {
+					client, err := getAIClient()
+					if err != nil {
+						errChan <- err
+						return
+					}
+
+					content := info.RawContent
+					if strategy == "auto" {
+						content = analysis.CompactEvidence(info, maxAIChars)
+						method = "ai-fallback"
+					} else {
+						method = "ai-only"
+					}
+
+					aiSuggested, err := client.SuggestFilename(content)
+					if err != nil {
+						errChan <- err
+						return
+					}
+					suggested = aiSuggested
+					confidence = 1
 				}
 
 				// Sanitize to avoid invalid characters.
@@ -126,9 +182,9 @@ func main() {
 				// Depending on flags, perform or log the operation.
 				switch {
 				case dry && !renameMode:
-					log.Printf("[DRY] %s  →  %s/%s\n", path, output, sanitized+ext)
+					log.Printf("[DRY] %s  →  %s/%s method=%s confidence=%.2f\n", path, output, sanitized+ext, method, confidence)
 				case dry && renameMode:
-					log.Printf("[DRY] %s  →  %s\n", path, sanitized+ext)
+					log.Printf("[DRY] %s  →  %s method=%s confidence=%.2f\n", path, sanitized+ext, method, confidence)
 				case !renameMode:
 					if err := utils.CopyFile(input, path, output, sanitized, flatten); err != nil {
 						errChan <- err
@@ -141,9 +197,9 @@ func main() {
 			}
 
 			// Walk the directory tree and dispatch work.
-			if err := extractors.Walk(input, types, func(path, content string) error {
+			if err := extractors.WalkInfo(input, types, func(info extractors.ExtractedFileInfo) error {
 				wg.Add(1)
-				go processFile(path, content)
+				go processFile(info)
 				return nil // continue walking
 			}); err != nil {
 				return err
