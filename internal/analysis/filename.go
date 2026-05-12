@@ -27,15 +27,12 @@ var stopWords = map[string]struct{}{
 }
 
 var genericWords = map[string]struct{}{
-	"data": {}, "document": {}, "file": {}, "final": {}, "new": {}, "note": {},
-	"notes": {}, "scan": {}, "text": {}, "untitled": {},
+	"data": {}, "document": {}, "file": {}, "final": {}, "id": {}, "index": {}, "new": {},
+	"note": {}, "notes": {}, "scan": {}, "text": {}, "untitled": {},
 }
 
 func GenerateFilename(info extractors.ExtractedFileInfo) FilenameSuggestion {
-	samples := append([]extractors.TextSample(nil), info.TextSamples...)
-	sort.SliceStable(samples, func(i, j int) bool {
-		return samples[i].Score > samples[j].Score
-	})
+	samples := RankEvidence(info)
 
 	for _, sample := range samples {
 		words := meaningfulWords(sample.Text, 8)
@@ -81,10 +78,7 @@ func CompactEvidence(info extractors.ExtractedFileInfo, maxChars int) string {
 		maxChars = 2000
 	}
 
-	samples := append([]extractors.TextSample(nil), info.TextSamples...)
-	sort.SliceStable(samples, func(i, j int) bool {
-		return samples[i].Score > samples[j].Score
-	})
+	samples := RankEvidence(info)
 	if len(samples) > 5 {
 		samples = samples[:5]
 	}
