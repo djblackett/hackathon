@@ -88,6 +88,42 @@ func TestCompactEvidenceUsesRankedSamples(t *testing.T) {
 	}
 }
 
+func TestGenerateFilenameFromHTMLPrefersOpenGraphTitle(t *testing.T) {
+	info := extractors.ExtractedFileInfo{
+		DetectedType: "html",
+		TextSamples: []extractors.TextSample{
+			{Source: "content", Text: "Footer privacy policy copyright and repeated navigation text", Score: 0.35},
+			{Source: "html-title", Text: "Generic Export Page", Score: 0.95},
+			{Source: "html-og-title", Text: "Network Migration Cutover Plan", Score: 0.96},
+		},
+	}
+
+	got := GenerateFilename(info)
+
+	if got.Filename != "network-migration-cutover-plan" {
+		t.Fatalf("filename = %q", got.Filename)
+	}
+	if got.Evidence[0] != "html-og-title" {
+		t.Fatalf("evidence = %+v, want html-og-title first", got.Evidence)
+	}
+}
+
+func TestGenerateFilenameFromHTMLHeadingFallback(t *testing.T) {
+	info := extractors.ExtractedFileInfo{
+		DetectedType: "html",
+		TextSamples: []extractors.TextSample{
+			{Source: "content", Text: "Footer privacy policy copyright and repeated navigation text", Score: 0.35},
+			{Source: "html-h1", Text: "Incident Response Runbook", Score: 0.9},
+		},
+	}
+
+	got := GenerateFilename(info)
+
+	if got.Filename != "incident-response-runbook" {
+		t.Fatalf("filename = %q", got.Filename)
+	}
+}
+
 func TestGenerateFilenameRejectsRandomText(t *testing.T) {
 	info := extractors.ExtractedFileInfo{
 		DetectedType: "text",

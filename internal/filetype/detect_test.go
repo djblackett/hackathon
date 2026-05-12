@@ -84,6 +84,19 @@ func TestDetectEmail(t *testing.T) {
 	}
 }
 
+func TestDetectHTMLWithoutHTMLExtension(t *testing.T) {
+	path := writeTestFile(t, "recovered.bin", `<!doctype html><html><head><title>Basics of Photosynthesis</title></head><body></body></html>`)
+
+	got := Detect(path)
+
+	if got.Type != "html" {
+		t.Fatalf("Type = %q, want html", got.Type)
+	}
+	if got.CanonicalExtension != "html" {
+		t.Fatalf("CanonicalExtension = %q, want html", got.CanonicalExtension)
+	}
+}
+
 func TestDetectMediaByExtension(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "clip.mp3")
 	if err := os.WriteFile(path, []byte{0x00, 0x01, 0x02, 0x03}, 0644); err != nil {
