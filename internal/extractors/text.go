@@ -9,6 +9,15 @@ import (
 type textExtractor struct{}
 
 func (textExtractor) CanHandle(path string) bool { return true } // fallback
+func (textExtractor) CanHandleType(detectedType string) bool {
+	switch detectedType {
+	case "text", "markdown", "log", "cfg", "ini":
+		return true
+	default:
+		return false
+	}
+}
+
 func (textExtractor) Extract(path string) (string, error) {
 	b, err := os.ReadFile(path)
 	return string(b), err
@@ -20,11 +29,11 @@ func (textExtractor) ExtractInfo(path string) (ExtractedFileInfo, error) {
 		return ExtractedFileInfo{}, err
 	}
 
-	info := NewExtractedFileInfo(path, content)
-	info.DetectedType = strings.TrimPrefix(strings.ToLower(filepath.Ext(path)), ".")
-	if info.DetectedType == "" {
-		info.DetectedType = "text"
+	detectedType := strings.TrimPrefix(strings.ToLower(filepath.Ext(path)), ".")
+	if detectedType == "" {
+		detectedType = "text"
 	}
+	info := NewExtractedFileInfo(path, detectedType, content)
 
 	for _, line := range strings.Split(content, "\n") {
 		line = strings.TrimSpace(line)

@@ -149,7 +149,7 @@ go run ./cmd/client/main.go --input ./files/input --dry-run
 |------|-------------|---------|
 | `--input` | Directory to scan for files | `files/input` |
 | `--output` | Output directory for processed files | `files/output` |
-| `--types` | File extensions to process (comma-separated) | `txt,md,csv,pdf,json,html,log,cfg,ini` |
+| `--types` | File extensions or detected content types to process (comma-separated) | `txt,md,csv,pdf,json,html,log,cfg,ini` |
 | `--local` | Use local Ollama instead of OpenAI | `false` |
 | `--model` | AI model name | `gpt-3.5-turbo` (OpenAI) / `mistral` (Ollama) |
 | `--dry-run` | Preview changes without processing | `false` |

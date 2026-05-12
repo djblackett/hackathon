@@ -14,6 +14,7 @@ type jsonExtractor struct{}
 func (jsonExtractor) CanHandle(path string) bool {
 	return strings.HasSuffix(strings.ToLower(path), ".json")
 }
+func (jsonExtractor) CanHandleType(detectedType string) bool { return detectedType == "json" }
 
 func (jsonExtractor) Extract(path string) (string, error) {
 	cmd := exec.Command("sh", "-c", fmt.Sprintf(`jq -r '
@@ -37,8 +38,7 @@ func (jsonExtractor) ExtractInfo(path string) (ExtractedFileInfo, error) {
 		return ExtractedFileInfo{}, err
 	}
 
-	info := NewExtractedFileInfo(path, string(b))
-	info.DetectedType = "json"
+	info := NewExtractedFileInfo(path, "json", string(b))
 
 	var value any
 	if err := json.Unmarshal(b, &value); err != nil {

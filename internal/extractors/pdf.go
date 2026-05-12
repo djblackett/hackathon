@@ -12,6 +12,7 @@ type pdfExtractor struct{}
 func (pdfExtractor) CanHandle(path string) bool {
 	return strings.HasSuffix(strings.ToLower(path), ".pdf")
 }
+func (pdfExtractor) CanHandleType(detectedType string) bool { return detectedType == "pdf" }
 
 func (pdfExtractor) Extract(path string) (string, error) {
 	pdf.DebugOn = true
@@ -38,8 +39,7 @@ func (pdfExtractor) ExtractInfo(path string) (ExtractedFileInfo, error) {
 		return ExtractedFileInfo{}, err
 	}
 
-	info := NewExtractedFileInfo(path, content)
-	info.DetectedType = "pdf"
+	info := NewExtractedFileInfo(path, "pdf", content)
 
 	for _, line := range strings.Split(content, "\n") {
 		line = strings.TrimSpace(line)

@@ -11,6 +11,7 @@ type csvExtractor struct{}
 func (csvExtractor) CanHandle(path string) bool {
 	return strings.HasSuffix(strings.ToLower(path), ".csv")
 }
+func (csvExtractor) CanHandleType(detectedType string) bool { return detectedType == "csv" }
 
 func (csvExtractor) Extract(path string) (string, error) {
 	b, err := os.ReadFile(path)
@@ -33,8 +34,7 @@ func (csvExtractor) ExtractInfo(path string) (ExtractedFileInfo, error) {
 	}
 
 	content := string(b)
-	info := NewExtractedFileInfo(path, content)
-	info.DetectedType = "csv"
+	info := NewExtractedFileInfo(path, "csv", content)
 
 	reader := csv.NewReader(strings.NewReader(content))
 	headers, err := reader.Read()

@@ -178,6 +178,9 @@ func main() {
 				sanitized := utils.Sanitize(suggested)
 
 				ext := filepath.Ext(path)
+				if info.SuggestedExtension != "" {
+					ext = "." + info.SuggestedExtension
+				}
 
 				// Depending on flags, perform or log the operation.
 				switch {
@@ -186,11 +189,11 @@ func main() {
 				case dry && renameMode:
 					log.Printf("[DRY] %s  →  %s method=%s confidence=%.2f\n", path, sanitized+ext, method, confidence)
 				case !renameMode:
-					if err := utils.CopyFile(input, path, output, sanitized, flatten); err != nil {
+					if err := utils.CopyFileWithExtension(input, path, output, sanitized, ext, flatten); err != nil {
 						errChan <- err
 					}
 				default: // rename in place
-					if err := utils.RenameFile(input, path, sanitized); err != nil {
+					if err := utils.RenameFileWithExtension(input, path, sanitized, ext); err != nil {
 						errChan <- err
 					}
 				}

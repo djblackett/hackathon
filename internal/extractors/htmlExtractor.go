@@ -16,6 +16,7 @@ func (htmlExtractor) CanHandle(p string) bool {
 	ext := strings.ToLower(filepath.Ext(p))
 	return ext == ".html" || ext == ".htm"
 }
+func (htmlExtractor) CanHandleType(detectedType string) bool { return detectedType == "html" }
 
 func (htmlExtractor) Extract(path string) (string, error) {
 	b, err := os.ReadFile(path)
@@ -44,8 +45,7 @@ func (htmlExtractor) ExtractInfo(path string) (ExtractedFileInfo, error) {
 	}
 
 	text := strings.TrimSpace(doc.Text())
-	info := NewExtractedFileInfo(path, text)
-	info.DetectedType = "html"
+	info := NewExtractedFileInfo(path, "html", text)
 
 	title := strings.TrimSpace(doc.Find("title").First().Text())
 	if title != "" {

@@ -5,6 +5,8 @@ import (
 	"io/fs"
 	"path/filepath"
 	"strings"
+
+	"github.com/djblackett/bootdev-hackathon/internal/filetype"
 )
 
 type Extractor interface {
@@ -52,13 +54,13 @@ func WalkInfo(dir string, types map[string]struct{}, fn func(ExtractedFileInfo) 
 			return err
 		}
 
-		ext := strings.TrimPrefix(strings.ToLower(filepath.Ext(path)), ".")
-		if _, ok := types[ext]; !ok {
+		detection := filetype.Detect(path)
+		if !allowedType(types, detection.Extension, detection.Type, detection.Subtype) {
 			return nil
 		}
 
 		for _, ex := range registered {
-			if !ex.CanHandle(path) {
+			if !extractorCanHandle(ex, path, detection.Type, detection.Subtype) {
 				continue
 			}
 
@@ -67,6 +69,7 @@ func WalkInfo(dir string, types map[string]struct{}, fn func(ExtractedFileInfo) 
 				if err != nil {
 					return err
 				}
+				applyDetection(&info, detection)
 				return fn(info)
 			}
 
@@ -74,8 +77,46 @@ func WalkInfo(dir string, types map[string]struct{}, fn func(ExtractedFileInfo) 
 			if err != nil {
 				return err
 			}
-			return fn(NewExtractedFileInfo(path, content))
+			info := NewExtractedFileInfo(path, detection.Type, content)
+			applyDetection(&info, detection)
+			return fn(info)
 		}
 		return nil
 	})
+}
+
+func allowedType(types map[string]struct{}, values ...string) bool {
+	for _, value := range values {
+		if value == "" {
+			continue
+		}
+		if _, ok := types[value]; ok {
+			return true
+		}
+	}
+	return false
+}
+
+func extractorCanHandle(ex Extractor, path, detectedType, detectedSubtype string) bool {
+	if typed, ok := ex.(TypeExtractor); ok {
+		return typed.CanHandleType(detectedType) || typed.CanHandleType(detectedSubtype)
+	}
+	return ex.CanHandle(path)
+}
+
+func applyDetection(info *ExtractedFileInfo, detection filetype.Detection) {
+	info.DetectedType = detection.Type
+	if info.Extension == "" {
+		info.Extension = detection.Extension
+	}
+	info.SuggestedExtension = detection.CanonicalExtension
+	if info.Metadata == nil {
+		info.Metadata = map[string]string{}
+	}
+	if detection.Subtype != "" {
+		info.Metadata["detected_subtype"] = detection.Subtype
+	}
+	if detection.Warning != "" {
+		info.Warnings = append(info.Warnings, detection.Warning)
+	}
 }

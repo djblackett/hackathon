@@ -12,13 +12,14 @@ type TextSample struct {
 }
 
 type ExtractedFileInfo struct {
-	Path         string
-	Extension    string
-	DetectedType string
-	Metadata     map[string]string
-	TextSamples  []TextSample
-	RawContent   string
-	Warnings     []string
+	Path               string
+	Extension          string
+	SuggestedExtension string
+	DetectedType       string
+	Metadata           map[string]string
+	TextSamples        []TextSample
+	RawContent         string
+	Warnings           []string
 }
 
 type InfoExtractor interface {
@@ -26,14 +27,22 @@ type InfoExtractor interface {
 	ExtractInfo(path string) (ExtractedFileInfo, error)
 }
 
-func NewExtractedFileInfo(path, content string) ExtractedFileInfo {
+type TypeExtractor interface {
+	CanHandleType(detectedType string) bool
+}
+
+func NewExtractedFileInfo(path, detectedType, content string) ExtractedFileInfo {
 	ext := strings.TrimPrefix(strings.ToLower(filepath.Ext(path)), ".")
+	if detectedType == "" {
+		detectedType = ext
+	}
 	info := ExtractedFileInfo{
-		Path:         path,
-		Extension:    ext,
-		DetectedType: ext,
-		Metadata:     map[string]string{},
-		RawContent:   content,
+		Path:               path,
+		Extension:          ext,
+		SuggestedExtension: ext,
+		DetectedType:       detectedType,
+		Metadata:           map[string]string{},
+		RawContent:         content,
 	}
 
 	if strings.TrimSpace(content) != "" {
