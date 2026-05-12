@@ -3,10 +3,12 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 	"testing"
 
@@ -29,8 +31,8 @@ func TestClientDryRunReportRecoveredCorpus(t *testing.T) {
 	)
 
 	got := readReport(t, reportPath)
-	if len(got.Entries) < 8 {
-		t.Fatalf("report entries = %d, want at least 8", len(got.Entries))
+	if len(got.Entries) != 9 {
+		t.Fatalf("report entries = %d, want 9", len(got.Entries))
 	}
 
 	bySource := map[string]report.Entry{}
@@ -63,6 +65,17 @@ func TestClientDryRunReportRecoveredCorpus(t *testing.T) {
 	if !destNames["name-email-status.csv"] || !destNames["name-email-status-2.csv"] {
 		t.Fatalf("missing collision-safe duplicate csv destinations: %+v", destNames)
 	}
+	assertGoldenReport(t, got, map[string]goldenEntry{
+		"customer-a.csv":    {Suggested: "name-email-status.csv", Method: "metadata", Evidence: "csv-headers"},
+		"customer-b.csv":    {Suggested: "name-email-status.csv", Method: "metadata", Evidence: "csv-headers"},
+		"file0007":          {Dest: "quiz-sport-q1-question-which-one-correct-team.json", Suggested: "quiz-sport-q1-question-which-one-correct-team.json", Method: "metadata", Evidence: "content"},
+		"markdown-note":     {Dest: "incident-response-runbook.md", Suggested: "incident-response-runbook.md", Method: "metadata", Evidence: "markdown-heading"},
+		"message":           {Dest: "customer-onboarding-checklist.eml", Suggested: "customer-onboarding-checklist.eml", Method: "metadata", Evidence: "email-subject"},
+		"random.txt":        {Dest: "unidentified-content.txt", Suggested: "unidentified-content.txt", Method: "metadata"},
+		"recovered-doc":     {Dest: "monumental-construction-panama-canal-completed-1914-stands-o.docx", Suggested: "monumental-construction-panama-canal-completed-1914-stands-o.docx", Method: "metadata", Evidence: "office-text"},
+		"recovered-pdf.bin": {Dest: "some-things-only-actually-potentially.pdf", Suggested: "some-things-only-actually-potentially.pdf", Method: "metadata", Evidence: "pdf-first-text"},
+		"unknown.dat":       {Dest: "customer-first-name-last-company-city-country-phone.csv", Suggested: "customer-first-name-last-company-city-country-phone.csv", Method: "metadata", Evidence: "csv-headers"},
+	})
 }
 
 func TestClientCopyModeCopiesFilesWithoutMutatingSources(t *testing.T) {
@@ -219,13 +232,46 @@ func TestMetadataOnlyDoesNotCreateAIClient(t *testing.T) {
 		"--strategy", "metadata-only",
 		"--dry-run",
 		"--input", filepath.Join(root, "testdata/recovered"),
-		"--types", "text",
+		"--types", "text,markdown",
 		"--report", reportPath,
 	}); err != nil {
 		t.Fatal(err)
 	}
 	if created {
 		t.Fatal("metadata-only should not create an AI client")
+	}
+}
+
+func TestClientLargeFixtureSmoke(t *testing.T) {
+	root := repoRoot(t)
+	inputDir := t.TempDir()
+	outputDir := t.TempDir()
+	reportPath := filepath.Join(t.TempDir(), "report.json")
+
+	for i := 0; i < 250; i++ {
+		path := filepath.Join(inputDir, fmt.Sprintf("recovered-%03d.txt", i))
+		content := fmt.Sprintf("# Batch Recovery File %03d\n\nOperational notes for generated fixture %03d.\n", i, i)
+		if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	runClient(t, root,
+		"--strategy", "metadata-only",
+		"--input", inputDir,
+		"--output", outputDir,
+		"--types", "text,markdown",
+		"--report", reportPath,
+	)
+
+	got := readReport(t, reportPath)
+	if len(got.Entries) != 250 {
+		t.Fatalf("report entries = %d, want 250", len(got.Entries))
+	}
+	for _, entry := range got.Entries {
+		if _, err := os.Stat(entry.DestinationPath); err != nil {
+			t.Fatalf("expected copied file %s: %v", entry.DestinationPath, err)
+		}
 	}
 }
 
@@ -276,6 +322,57 @@ func assertSuggestedName(t *testing.T, entries map[string]report.Entry, source, 
 	if entry.SuggestedName != want {
 		t.Fatalf("%s suggested name = %q, want %q", source, entry.SuggestedName, want)
 	}
+}
+
+type goldenEntry struct {
+	Dest      string
+	Suggested string
+	Method    string
+	Evidence  string
+}
+
+func assertGoldenReport(t *testing.T, got report.Report, want map[string]goldenEntry) {
+	t.Helper()
+
+	seen := map[string]goldenEntry{}
+	for _, entry := range got.Entries {
+		key := filepath.Base(entry.SourcePath)
+		evidence := ""
+		if len(entry.Evidence) > 0 {
+			evidence = entry.Evidence[0]
+		}
+		seen[key] = goldenEntry{
+			Dest:      filepath.Base(entry.DestinationPath),
+			Suggested: entry.SuggestedName,
+			Method:    entry.Method,
+			Evidence:  evidence,
+		}
+	}
+
+	if len(seen) != len(want) {
+		t.Fatalf("golden entry count = %d, want %d; got keys %v", len(seen), len(want), sortedKeys(seen))
+	}
+	for source, expected := range want {
+		actual, ok := seen[source]
+		if !ok {
+			t.Fatalf("missing golden source %s; got keys %v", source, sortedKeys(seen))
+		}
+		if expected.Dest == "" {
+			actual.Dest = ""
+		}
+		if actual != expected {
+			t.Fatalf("%s golden entry = %+v, want %+v", source, actual, expected)
+		}
+	}
+}
+
+func sortedKeys(entries map[string]goldenEntry) []string {
+	keys := make([]string, 0, len(entries))
+	for key := range entries {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return keys
 }
 
 func assertDestExt(t *testing.T, entries map[string]report.Entry, source, ext string) {
