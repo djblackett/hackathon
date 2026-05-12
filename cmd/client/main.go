@@ -35,7 +35,7 @@ func runApp(args []string) error {
 	cfg := config.FromEnv()
 
 	// Reasonable default extensions; can be overridden with --types "csv,html,…".
-	defaultFileTypes := []string{"txt", "text", "md", "markdown", "csv", "pdf", "json", "html", "log", "cfg", "ini", "docx", "xlsx", "pptx", "office", "eml", "email", "image", "media"}
+	defaultFileTypes := []string{"txt", "text", "md", "markdown", "csv", "pdf", "json", "html", "xml", "musicxml", "log", "cfg", "ini", "docx", "xlsx", "pptx", "office", "eml", "email", "image", "media"}
 
 	// Define CLI application.
 	app := &cli.App{

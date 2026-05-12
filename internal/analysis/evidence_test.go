@@ -124,6 +124,42 @@ func TestGenerateFilenameFromHTMLHeadingFallback(t *testing.T) {
 	}
 }
 
+func TestGenerateFilenameFromMusicXMLWorkTitle(t *testing.T) {
+	info := extractors.ExtractedFileInfo{
+		DetectedType: "xml",
+		Metadata:     map[string]string{"detected_subtype": "musicxml"},
+		TextSamples: []extractors.TextSample{
+			{Source: "musicxml-parts", Text: "Flute Clarinet Alto Sax", Score: 0.62},
+			{Source: "musicxml-work-title", Text: "You Are My Sunshine", Score: 0.95},
+		},
+	}
+
+	got := GenerateFilename(info)
+
+	if got.Filename != "you-my-sunshine" {
+		t.Fatalf("filename = %q", got.Filename)
+	}
+	if got.Evidence[0] != "musicxml-work-title" {
+		t.Fatalf("evidence = %+v, want musicxml-work-title first", got.Evidence)
+	}
+}
+
+func TestGenerateFilenameFromGenericXMLTitle(t *testing.T) {
+	info := extractors.ExtractedFileInfo{
+		DetectedType: "xml",
+		TextSamples: []extractors.TextSample{
+			{Source: "xml-root", Text: "archive-record", Score: 0.42},
+			{Source: "xml-title", Text: "Quarterly Safety Inspection Log", Score: 0.9},
+		},
+	}
+
+	got := GenerateFilename(info)
+
+	if got.Filename != "quarterly-safety-inspection-log" {
+		t.Fatalf("filename = %q", got.Filename)
+	}
+}
+
 func TestGenerateFilenameRejectsRandomText(t *testing.T) {
 	info := extractors.ExtractedFileInfo{
 		DetectedType: "text",

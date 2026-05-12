@@ -97,6 +97,32 @@ func TestDetectHTMLWithoutHTMLExtension(t *testing.T) {
 	}
 }
 
+func TestDetectXMLWithoutXMLExtension(t *testing.T) {
+	path := writeTestFile(t, "recovered.bin", `<?xml version="1.0"?><archive-record><title>Quarterly Safety Inspection Log</title></archive-record>`)
+
+	got := Detect(path)
+
+	if got.Type != "xml" {
+		t.Fatalf("Type = %q, want xml", got.Type)
+	}
+	if got.CanonicalExtension != "xml" {
+		t.Fatalf("CanonicalExtension = %q, want xml", got.CanonicalExtension)
+	}
+}
+
+func TestDetectMusicXMLWithoutExtension(t *testing.T) {
+	path := writeTestFile(t, "recovered", `<?xml version="1.0"?><score-partwise version="3.0"><work><work-title>You Are My Sunshine</work-title></work></score-partwise>`)
+
+	got := Detect(path)
+
+	if got.Type != "xml" || got.Subtype != "musicxml" {
+		t.Fatalf("got type=%q subtype=%q, want xml/musicxml", got.Type, got.Subtype)
+	}
+	if got.CanonicalExtension != "musicxml" {
+		t.Fatalf("CanonicalExtension = %q, want musicxml", got.CanonicalExtension)
+	}
+}
+
 func TestDetectMediaByExtension(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "clip.mp3")
 	if err := os.WriteFile(path, []byte{0x00, 0x01, 0x02, 0x03}, 0644); err != nil {

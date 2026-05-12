@@ -31,8 +31,8 @@ func TestClientDryRunReportRecoveredCorpus(t *testing.T) {
 	)
 
 	got := readReport(t, reportPath)
-	if len(got.Entries) != 10 {
-		t.Fatalf("report entries = %d, want 10", len(got.Entries))
+	if len(got.Entries) != 12 {
+		t.Fatalf("report entries = %d, want 12", len(got.Entries))
 	}
 
 	bySource := map[string]report.Entry{}
@@ -52,6 +52,8 @@ func TestClientDryRunReportRecoveredCorpus(t *testing.T) {
 	assertDestExt(t, bySource, "message", ".eml")
 	assertDestExt(t, bySource, "markdown-note", ".md")
 	assertDestExt(t, bySource, "recovered-html", ".html")
+	assertDestExt(t, bySource, "recovered-musicxml", ".musicxml")
+	assertDestExt(t, bySource, "recovered-xml.bin", ".xml")
 	assertSuggestedName(t, bySource, "customer-a.csv", "name-email-status.csv")
 	assertSuggestedName(t, bySource, "customer-b.csv", "name-email-status.csv")
 	assertSuggestedName(t, bySource, "unknown.dat", "customer-first-name-last-company-city-country-phone.csv")
@@ -59,6 +61,8 @@ func TestClientDryRunReportRecoveredCorpus(t *testing.T) {
 	assertSuggestedName(t, bySource, "message", "customer-onboarding-checklist.eml")
 	assertSuggestedName(t, bySource, "recovered-doc", "monumental-construction-panama-canal-completed-1914-stands-o.docx")
 	assertSuggestedName(t, bySource, "recovered-html", "basics-photosynthesis.html")
+	assertSuggestedName(t, bySource, "recovered-musicxml", "you-my-sunshine.musicxml")
+	assertSuggestedName(t, bySource, "recovered-xml.bin", "quarterly-safety-inspection-log.xml")
 	assertSuggestedName(t, bySource, "random.txt", "unidentified-content.txt")
 
 	if bySource["random.txt"].Confidence >= 0.4 {
@@ -68,16 +72,18 @@ func TestClientDryRunReportRecoveredCorpus(t *testing.T) {
 		t.Fatalf("missing collision-safe duplicate csv destinations: %+v", destNames)
 	}
 	assertGoldenReport(t, got, map[string]goldenEntry{
-		"customer-a.csv":    {Suggested: "name-email-status.csv", Method: "metadata", Evidence: "csv-headers"},
-		"customer-b.csv":    {Suggested: "name-email-status.csv", Method: "metadata", Evidence: "csv-headers"},
-		"file0007":          {Dest: "quiz-sport-q1-question-which-one-correct-team.json", Suggested: "quiz-sport-q1-question-which-one-correct-team.json", Method: "metadata", Evidence: "content"},
-		"markdown-note":     {Dest: "incident-response-runbook.md", Suggested: "incident-response-runbook.md", Method: "metadata", Evidence: "markdown-heading"},
-		"message":           {Dest: "customer-onboarding-checklist.eml", Suggested: "customer-onboarding-checklist.eml", Method: "metadata", Evidence: "email-subject"},
-		"random.txt":        {Dest: "unidentified-content.txt", Suggested: "unidentified-content.txt", Method: "metadata"},
-		"recovered-doc":     {Dest: "monumental-construction-panama-canal-completed-1914-stands-o.docx", Suggested: "monumental-construction-panama-canal-completed-1914-stands-o.docx", Method: "metadata", Evidence: "office-text"},
-		"recovered-html":    {Dest: "basics-photosynthesis.html", Suggested: "basics-photosynthesis.html", Method: "metadata", Evidence: "html-title"},
-		"recovered-pdf.bin": {Dest: "some-things-only-actually-potentially.pdf", Suggested: "some-things-only-actually-potentially.pdf", Method: "metadata", Evidence: "pdf-first-text"},
-		"unknown.dat":       {Dest: "customer-first-name-last-company-city-country-phone.csv", Suggested: "customer-first-name-last-company-city-country-phone.csv", Method: "metadata", Evidence: "csv-headers"},
+		"customer-a.csv":     {Suggested: "name-email-status.csv", Method: "metadata", Evidence: "csv-headers"},
+		"customer-b.csv":     {Suggested: "name-email-status.csv", Method: "metadata", Evidence: "csv-headers"},
+		"file0007":           {Dest: "quiz-sport-q1-question-which-one-correct-team.json", Suggested: "quiz-sport-q1-question-which-one-correct-team.json", Method: "metadata", Evidence: "content"},
+		"markdown-note":      {Dest: "incident-response-runbook.md", Suggested: "incident-response-runbook.md", Method: "metadata", Evidence: "markdown-heading"},
+		"message":            {Dest: "customer-onboarding-checklist.eml", Suggested: "customer-onboarding-checklist.eml", Method: "metadata", Evidence: "email-subject"},
+		"random.txt":         {Dest: "unidentified-content.txt", Suggested: "unidentified-content.txt", Method: "metadata"},
+		"recovered-doc":      {Dest: "monumental-construction-panama-canal-completed-1914-stands-o.docx", Suggested: "monumental-construction-panama-canal-completed-1914-stands-o.docx", Method: "metadata", Evidence: "office-text"},
+		"recovered-html":     {Dest: "basics-photosynthesis.html", Suggested: "basics-photosynthesis.html", Method: "metadata", Evidence: "html-title"},
+		"recovered-musicxml": {Dest: "you-my-sunshine.musicxml", Suggested: "you-my-sunshine.musicxml", Method: "metadata", Evidence: "musicxml-work-title"},
+		"recovered-xml.bin":  {Dest: "quarterly-safety-inspection-log.xml", Suggested: "quarterly-safety-inspection-log.xml", Method: "metadata", Evidence: "xml-title"},
+		"recovered-pdf.bin":  {Dest: "some-things-only-actually-potentially.pdf", Suggested: "some-things-only-actually-potentially.pdf", Method: "metadata", Evidence: "pdf-first-text"},
+		"unknown.dat":        {Dest: "customer-first-name-last-company-city-country-phone.csv", Suggested: "customer-first-name-last-company-city-country-phone.csv", Method: "metadata", Evidence: "csv-headers"},
 	})
 }
 

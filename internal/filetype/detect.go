@@ -53,7 +53,7 @@ func Detect(path string) Detection {
 	case bytes.HasPrefix(sample, []byte("PK\x03\x04")):
 		detection.Type, detection.Subtype = detectZipContainer(path)
 	default:
-		detection.Type = detectTextLike(sample, ext)
+		detection.Type, detection.Subtype = detectTextLike(sample, ext)
 	}
 	if detection.CanonicalExtension == "" {
 		detection.CanonicalExtension = canonicalExtension(detection.Type, detection.Subtype, ext)
@@ -84,33 +84,35 @@ func detectZipContainer(path string) (string, string) {
 	return "zip", ""
 }
 
-func detectTextLike(sample []byte, ext string) string {
+func detectTextLike(sample []byte, ext string) (string, string) {
 	trimmed := bytes.TrimSpace(bytes.TrimPrefix(sample, []byte{0xEF, 0xBB, 0xBF}))
 	if len(trimmed) == 0 {
-		return extensionFallback(ext)
+		return extensionFallback(ext), ""
 	}
 	if !utf8.Valid(trimmed) || mostlyBinary(trimmed) {
-		return binaryExtensionFallback(ext)
+		return binaryExtensionFallback(ext), ""
 	}
 
 	lower := strings.ToLower(string(trimmed))
 
 	switch {
 	case ext == "eml" || looksEmail(lower):
-		return "email"
+		return "email", ""
 	case json.Valid(trimmed):
-		return "json"
+		return "json", ""
 	case looksHTML(lower):
-		return "html"
+		return "html", ""
+	case looksXML(lower):
+		return "xml", xmlSubtype(lower)
 	case ext == "md" || looksMarkdown(lower):
-		return "markdown"
+		return "markdown", ""
 	case ext == "csv" || looksCSV(string(trimmed)):
-		return "csv"
+		return "csv", ""
 	default:
 		if ext == "" {
-			return "text"
+			return "text", ""
 		}
-		return extensionFallback(ext)
+		return extensionFallback(ext), ""
 	}
 }
 
@@ -132,6 +134,8 @@ func extensionFallback(ext string) string {
 		return "json"
 	case "html", "htm":
 		return "html"
+	case "xml", "musicxml":
+		return "xml"
 	case "pdf":
 		return "pdf"
 	case "eml":
@@ -186,6 +190,20 @@ func looksHTML(s string) bool {
 		strings.Contains(s, "<body")
 }
 
+func looksXML(s string) bool {
+	return strings.HasPrefix(s, "<?xml") ||
+		strings.HasPrefix(s, "<score-partwise") ||
+		strings.HasPrefix(s, "<score-timewise") ||
+		strings.HasPrefix(s, "<") && strings.Contains(s, ">") && strings.Contains(s, "</")
+}
+
+func xmlSubtype(s string) string {
+	if strings.Contains(s, "<score-partwise") || strings.Contains(s, "<score-timewise") {
+		return "musicxml"
+	}
+	return ""
+}
+
 func looksMarkdown(s string) bool {
 	for _, line := range strings.Split(s, "\n") {
 		line = strings.TrimSpace(line)
@@ -235,6 +253,11 @@ func canonicalExtension(detectedType, subtype, originalExt string) string {
 		return "csv"
 	case "html":
 		return "html"
+	case "xml":
+		if subtype == "musicxml" {
+			return "musicxml"
+		}
+		return "xml"
 	case "markdown":
 		return "md"
 	case "office":

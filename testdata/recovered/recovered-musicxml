@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 3.0 Partwise//EN" "http://www.musicxml.org/dtds/partwise.dtd">
+<score-partwise version="3.0">
+  <work>
+    <work-title>You Are My Sunshine</work-title>
+  </work>
+  <movement-title>Beginner Band</movement-title>
+  <identification>
+    <creator type="composer">6 Note Songs</creator>
+    <encoding>
+      <software>Notion 6.8.2</software>
+    </encoding>
+  </identification>
+  <part-list>
+    <score-part id="P1"><part-name>Flute</part-name></score-part>
+    <score-part id="P2"><part-name>Clarinet</part-name></score-part>
+    <score-part id="P3"><part-name>Alto Sax</part-name></score-part>
+  </part-list>
+</score-partwise>
