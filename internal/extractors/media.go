@@ -37,7 +37,6 @@ func (mediaExtractor) ExtractInfo(path string) (ExtractedFileInfo, error) {
 	meta, warning := ffprobeMetadata(path)
 	if warning != "" {
 		info.Warnings = append(info.Warnings, warning)
-		return info, nil
 	}
 
 	for k, v := range meta {
@@ -166,7 +165,10 @@ func meaningfulMediaBasename(path string) string {
 	if regexp.MustCompile(`^\d{4}[-_]\d{2}[-_]\d{2}([_ -]\d{2}[-_]\d{2}[-_]\d{2})?$`).MatchString(lower) {
 		return ""
 	}
-	if regexp.MustCompile(`^(img|dsc|mov|vid|audio|video|file)[-_ ]?\d+$`).MatchString(lower) {
+	if regexp.MustCompile(`^(img|dsc|mov|vid|pxl|audio|video|file)[-_ ]?\d+([_-]\d+)*$`).MatchString(lower) {
+		return ""
+	}
+	if looksRandomMediaName(lower) {
 		return ""
 	}
 	base = strings.NewReplacer("_", " ", "-", " ").Replace(base)
@@ -182,6 +184,36 @@ func mediaFilenameScore(name string) float64 {
 		return 0.72
 	}
 	return 0.82
+}
+
+func looksRandomMediaName(s string) bool {
+	tokens := regexp.MustCompile(`[a-z0-9]+`).FindAllString(strings.ToLower(s), -1)
+	for _, token := range tokens {
+		if len(token) < 12 {
+			continue
+		}
+		letters := 0
+		vowels := 0
+		digits := 0
+		for _, r := range token {
+			switch {
+			case r >= '0' && r <= '9':
+				digits++
+			case r >= 'a' && r <= 'z':
+				letters++
+				if strings.ContainsRune("aeiou", r) {
+					vowels++
+				}
+			}
+		}
+		if letters >= 8 && float64(vowels)/float64(letters) < 0.2 {
+			return true
+		}
+		if digits >= 6 && letters >= 4 {
+			return true
+		}
+	}
+	return false
 }
 
 func init() { Register(mediaExtractor{}) }

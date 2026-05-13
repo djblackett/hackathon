@@ -177,3 +177,80 @@ func TestGenerateFilenameRejectsRandomText(t *testing.T) {
 		t.Fatalf("confidence = %.2f, want low confidence", got.Confidence)
 	}
 }
+
+func TestGenerateFilenameAllowsMeaningfulMediaBasename(t *testing.T) {
+	info := extractors.ExtractedFileInfo{
+		DetectedType:       "media",
+		SuggestedExtension: "mp4",
+		TextSamples: []extractors.TextSample{
+			{Source: "media-filename", Text: "alice", Score: 0.72},
+		},
+	}
+
+	got := GenerateFilename(info)
+
+	if got.Filename != "alice" {
+		t.Fatalf("filename = %q, want alice", got.Filename)
+	}
+	if got.Confidence < 0.7 {
+		t.Fatalf("confidence = %.2f, want basename confidence", got.Confidence)
+	}
+}
+
+func TestGenerateFilenameUsesMediaTagsBeforeProperties(t *testing.T) {
+	info := extractors.ExtractedFileInfo{
+		DetectedType:       "media",
+		SuggestedExtension: "mp3",
+		TextSamples: []extractors.TextSample{
+			{Source: "media-properties", Text: "audio MP3 audio 123.45", Score: 0.35},
+			{Source: "media-tags", Text: "Late Night Drive Retro Metro City Lights", Score: 0.9},
+		},
+	}
+
+	got := GenerateFilename(info)
+
+	if got.Filename != "late-night-drive-retro-metro-city-lights" {
+		t.Fatalf("filename = %q", got.Filename)
+	}
+	if got.Evidence[0] != "media-tags" {
+		t.Fatalf("evidence = %+v, want media-tags first", got.Evidence)
+	}
+}
+
+func TestGenerateFilenameRejectsSparseMediaProperties(t *testing.T) {
+	info := extractors.ExtractedFileInfo{
+		DetectedType:       "media",
+		SuggestedExtension: "mkv",
+		TextSamples: []extractors.TextSample{
+			{Source: "media-properties", Text: "video Matroska WebM 12.0", Score: 0.35},
+		},
+	}
+
+	got := GenerateFilename(info)
+
+	if got.Filename != "unidentified-video" {
+		t.Fatalf("filename = %q, want unidentified-video", got.Filename)
+	}
+	if got.Confidence >= 0.4 {
+		t.Fatalf("confidence = %.2f, want low confidence", got.Confidence)
+	}
+}
+
+func TestGenerateFilenameUsesMediaKindFallbacks(t *testing.T) {
+	cases := []struct {
+		ext  string
+		want string
+	}{
+		{ext: "wav", want: "unidentified-audio"},
+		{ext: "mp4", want: "unidentified-video"},
+		{ext: "", want: "unidentified-media"},
+	}
+
+	for _, tc := range cases {
+		info := extractors.ExtractedFileInfo{DetectedType: "media", SuggestedExtension: tc.ext}
+		got := GenerateFilename(info)
+		if got.Filename != tc.want {
+			t.Fatalf("ext %q filename = %q, want %q", tc.ext, got.Filename, tc.want)
+		}
+	}
+}

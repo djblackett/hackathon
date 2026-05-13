@@ -28,7 +28,7 @@ func RankEvidence(info extractors.ExtractedFileInfo) []RankedEvidence {
 			score = sample.Score
 		}
 		score += qualityBoost(text)
-		score -= evidencePenalty(text)
+		score -= evidencePenalty(sample.Source, text)
 		score = clamp(score, 0, 0.98)
 
 		ranked = append(ranked, RankedEvidence{
@@ -119,11 +119,12 @@ func qualityBoost(text string) float64 {
 	}
 }
 
-func evidencePenalty(text string) float64 {
+func evidencePenalty(source, text string) float64 {
 	lower := strings.ToLower(text)
 	penalty := 0.0
 
-	if len(meaningfulWords(text, 12)) < 2 {
+	words := meaningfulWords(text, 12)
+	if len(words) < 2 && !allowSingleWordEvidence(source, words) {
 		penalty += 0.25
 	}
 	if containsBoilerplate(lower) {

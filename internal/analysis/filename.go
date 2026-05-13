@@ -72,10 +72,24 @@ func GenerateFilename(info extractors.ExtractedFileInfo) FilenameSuggestion {
 	}
 
 	return FilenameSuggestion{
-		Filename:   "unidentified-content",
+		Filename:   unidentifiedFallback(info),
 		Confidence: 0.1,
 		Method:     "metadata",
 		Reason:     "no strong local evidence found",
+	}
+}
+
+func unidentifiedFallback(info extractors.ExtractedFileInfo) string {
+	if info.DetectedType != "media" {
+		return "unidentified-content"
+	}
+	switch strings.ToLower(info.SuggestedExtension) {
+	case "mp3", "m4a", "wav", "flac":
+		return "unidentified-audio"
+	case "mp4", "mov", "mkv", "avi":
+		return "unidentified-video"
+	default:
+		return "unidentified-media"
 	}
 }
 
