@@ -34,6 +34,15 @@ func TestClientDryRunReportRecoveredCorpus(t *testing.T) {
 	if len(got.Entries) != 12 {
 		t.Fatalf("report entries = %d, want 12", len(got.Entries))
 	}
+	if got.Summary.TotalFiles != 12 {
+		t.Fatalf("summary total = %d, want 12", got.Summary.TotalFiles)
+	}
+	if got.Summary.PlannedCount != 12 || got.Summary.CopiedCount != 0 {
+		t.Fatalf("unexpected dry-run summary: %+v", got.Summary)
+	}
+	if got.Summary.LowConfidenceCount != 1 {
+		t.Fatalf("low confidence count = %d, want 1", got.Summary.LowConfidenceCount)
+	}
 
 	bySource := map[string]report.Entry{}
 	destNames := map[string]bool{}
@@ -117,6 +126,47 @@ func TestClientCopyModeCopiesFilesWithoutMutatingSources(t *testing.T) {
 	}
 }
 
+func TestClientCopyModeSkipsLowConfidenceFiles(t *testing.T) {
+	root := repoRoot(t)
+	outputDir := t.TempDir()
+	reportPath := filepath.Join(t.TempDir(), "report.json")
+
+	runClient(t, root,
+		"--strategy", "metadata-only",
+		"--input", filepath.Join(root, "testdata/recovered"),
+		"--output", outputDir,
+		"--types", "text,markdown",
+		"--min-confidence-to-copy", "0.75",
+		"--report", reportPath,
+	)
+
+	got := readReport(t, reportPath)
+	bySource := entriesByBase(got)
+	random := bySource["random.txt"]
+	if !random.Skipped {
+		t.Fatalf("random.txt should be skipped: %+v", random)
+	}
+	if !strings.Contains(random.SkipReason, "below copy threshold") {
+		t.Fatalf("skip reason = %q", random.SkipReason)
+	}
+	if _, err := os.Stat(random.DestinationPath); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("skipped file should not be copied, stat err=%v", err)
+	}
+	heading := bySource["markdown-note"]
+	if heading.Skipped {
+		t.Fatalf("markdown-note should not be skipped: %+v", heading)
+	}
+	if _, err := os.Stat(heading.DestinationPath); err != nil {
+		t.Fatalf("expected markdown copy: %v", err)
+	}
+	if got.Summary.SkippedCount != 1 {
+		t.Fatalf("summary skipped = %d, want 1", got.Summary.SkippedCount)
+	}
+	if got.Summary.CopiedCount != 1 {
+		t.Fatalf("summary copied = %d, want 1", got.Summary.CopiedCount)
+	}
+}
+
 func TestClientApplyReportCopiesPlannedFiles(t *testing.T) {
 	root := repoRoot(t)
 	outputDir := t.TempDir()
@@ -165,30 +215,67 @@ func TestApplyReportDryRunDoesNotCopy(t *testing.T) {
 
 func TestApplyReportReturnsMissingSourceError(t *testing.T) {
 	reportPath := filepath.Join(t.TempDir(), "report.json")
+	missing := filepath.Join(t.TempDir(), "missing.txt")
 	if err := report.Write(reportPath, []report.Entry{{
-		SourcePath:      filepath.Join(t.TempDir(), "missing.txt"),
+		SourcePath:      missing,
 		DestinationPath: filepath.Join(t.TempDir(), "out.txt"),
 	}}); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := applyReport(reportPath, false); err == nil {
+	err := applyReport(reportPath, false)
+	if err == nil {
 		t.Fatal("expected missing source error")
+	}
+	if !strings.Contains(err.Error(), "source file does not exist") || !strings.Contains(err.Error(), missing) {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
-func TestApplyReportSkipsEmptyEntries(t *testing.T) {
+func TestApplyReportValidatesEmptyEntries(t *testing.T) {
 	reportPath := filepath.Join(t.TempDir(), "report.json")
+	source := filepath.Join(t.TempDir(), "source.txt")
+	if err := os.WriteFile(source, []byte("source"), 0644); err != nil {
+		t.Fatal(err)
+	}
 	if err := report.Write(reportPath, []report.Entry{
 		{},
 		{SourcePath: "", DestinationPath: filepath.Join(t.TempDir(), "out.txt")},
-		{SourcePath: filepath.Join(t.TempDir(), "missing.txt"), DestinationPath: ""},
+		{SourcePath: source, DestinationPath: ""},
 	}); err != nil {
 		t.Fatal(err)
 	}
 
+	err := applyReport(reportPath, false)
+	if err == nil {
+		t.Fatal("expected empty source error")
+	}
+	if !strings.Contains(err.Error(), "empty source path") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestApplyReportSkipsReportSkippedEntries(t *testing.T) {
+	source := filepath.Join(t.TempDir(), "source.txt")
+	dest := filepath.Join(t.TempDir(), "dest.txt")
+	reportPath := filepath.Join(t.TempDir(), "report.json")
+	if err := os.WriteFile(source, []byte("source"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := report.Write(reportPath, []report.Entry{{
+		SourcePath:      source,
+		DestinationPath: dest,
+		Skipped:         true,
+		SkipReason:      "low confidence",
+	}}); err != nil {
+		t.Fatal(err)
+	}
+
 	if err := applyReport(reportPath, false); err != nil {
-		t.Fatalf("expected empty entries to be skipped, got %v", err)
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(dest); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("skipped report entry should not copy destination, stat err=%v", err)
 	}
 }
 

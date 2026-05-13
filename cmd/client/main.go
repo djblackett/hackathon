@@ -92,6 +92,11 @@ func runApp(args []string) error {
 				Value: 2000,
 				Usage: "maximum compact evidence characters sent to AI in auto mode",
 			},
+			&cli.Float64Flag{
+				Name:  "min-confidence-to-copy",
+				Value: 0,
+				Usage: "minimum confidence required before copying files; 0 disables copy skipping",
+			},
 			&cli.StringFlag{
 				Name:  "report",
 				Usage: "write a JSON report of processed files",
@@ -119,6 +124,7 @@ func runApp(args []string) error {
 			strategy := c.String("strategy")
 			confidenceThreshold := c.Float64("confidence-threshold")
 			maxAIChars := c.Int("max-ai-chars")
+			minConfidenceToCopy := c.Float64("min-confidence-to-copy")
 			reportPath := c.String("report")
 			applyReportPath := c.String("apply-report")
 
@@ -233,6 +239,13 @@ func runApp(args []string) error {
 					outputMu.Unlock()
 				}
 
+				skipped := false
+				skipReason := ""
+				if !dry && !renameMode && minConfidenceToCopy > 0 && confidence < minConfidenceToCopy {
+					skipped = true
+					skipReason = fmt.Sprintf("confidence %.2f below copy threshold %.2f", confidence, minConfidenceToCopy)
+				}
+
 				reportMu.Lock()
 				reportEntries = append(reportEntries, report.Entry{
 					SourcePath:      path,
@@ -243,6 +256,8 @@ func runApp(args []string) error {
 					Evidence:        evidence,
 					Warnings:        append([]string(nil), info.Warnings...),
 					DryRun:          dry,
+					Skipped:         skipped,
+					SkipReason:      skipReason,
 				})
 				reportMu.Unlock()
 
@@ -252,6 +267,8 @@ func runApp(args []string) error {
 					log.Printf("[DRY] %s  →  %s method=%s confidence=%.2f\n", path, destPath, method, confidence)
 				case dry && renameMode:
 					log.Printf("[DRY] %s  →  %s method=%s confidence=%.2f\n", path, destPath, method, confidence)
+				case skipped:
+					log.Printf("[SKIP] %s  →  %s method=%s confidence=%.2f reason=%s\n", path, destPath, method, confidence, skipReason)
 				case !renameMode:
 					if err := utils.CopyFileToPath(path, destPath); err != nil {
 						errChan <- err
@@ -313,8 +330,24 @@ func applyReport(path string, dry bool) error {
 		return err
 	}
 
-	for _, entry := range planned.Entries {
-		if entry.SourcePath == "" || entry.DestinationPath == "" {
+	for i, entry := range planned.Entries {
+		if entry.SourcePath == "" && entry.DestinationPath == "" {
+			continue
+		}
+		if entry.SourcePath == "" {
+			return fmt.Errorf("report entry %d has empty source path", i)
+		}
+		if entry.DestinationPath == "" {
+			return fmt.Errorf("report entry %d has empty destination path", i)
+		}
+		if _, err := os.Stat(entry.SourcePath); err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				return fmt.Errorf("report entry %d source file does not exist: %s", i, entry.SourcePath)
+			}
+			return fmt.Errorf("report entry %d source file could not be checked: %s: %w", i, entry.SourcePath, err)
+		}
+		if entry.Skipped {
+			log.Printf("[SKIP] %s  →  %s method=apply-report reason=%s\n", entry.SourcePath, entry.DestinationPath, entry.SkipReason)
 			continue
 		}
 		if dry {
