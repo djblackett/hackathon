@@ -236,6 +236,45 @@ func TestGenerateFilenameRejectsSparseMediaProperties(t *testing.T) {
 	}
 }
 
+func TestGenerateFilenameRejectsSparseImageProperties(t *testing.T) {
+	info := extractors.ExtractedFileInfo{
+		DetectedType:       "image",
+		SuggestedExtension: "png",
+		TextSamples: []extractors.TextSample{
+			{Source: "image-properties", Text: "png image 1024x1024", Score: 0.45},
+		},
+	}
+
+	got := GenerateFilename(info)
+
+	if got.Filename != "unidentified-image" {
+		t.Fatalf("filename = %q, want unidentified-image", got.Filename)
+	}
+	if got.Confidence >= 0.4 {
+		t.Fatalf("confidence = %.2f, want low confidence", got.Confidence)
+	}
+}
+
+func TestGenerateFilenameUsesImageExifBeforeProperties(t *testing.T) {
+	info := extractors.ExtractedFileInfo{
+		DetectedType:       "image",
+		SuggestedExtension: "jpg",
+		TextSamples: []extractors.TextSample{
+			{Source: "image-properties", Text: "jpeg image 4000x3000", Score: 0.45},
+			{Source: "image-exif-title", Text: "Cliffs at Western Brook Pond", Score: 0.9},
+		},
+	}
+
+	got := GenerateFilename(info)
+
+	if got.Filename != "cliffs-western-brook-pond" {
+		t.Fatalf("filename = %q", got.Filename)
+	}
+	if got.Evidence[0] != "image-exif-title" {
+		t.Fatalf("evidence = %+v, want image-exif-title first", got.Evidence)
+	}
+}
+
 func TestGenerateFilenameUsesMediaKindFallbacks(t *testing.T) {
 	cases := []struct {
 		ext  string

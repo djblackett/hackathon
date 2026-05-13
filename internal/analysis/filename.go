@@ -38,6 +38,9 @@ func GenerateFilename(info extractors.ExtractedFileInfo) FilenameSuggestion {
 	samples := RankEvidence(info)
 
 	for _, sample := range samples {
+		if !filenameEvidenceSource(sample.Source) {
+			continue
+		}
 		if sample.Score < minimumLocalEvidenceScore {
 			continue
 		}
@@ -80,16 +83,37 @@ func GenerateFilename(info extractors.ExtractedFileInfo) FilenameSuggestion {
 }
 
 func unidentifiedFallback(info extractors.ExtractedFileInfo) string {
-	if info.DetectedType != "media" {
+	switch info.DetectedType {
+	case "media":
+		return unidentifiedMediaFallback(info.SuggestedExtension)
+	case "image":
+		return unidentifiedImageFallback(info.SuggestedExtension)
+	default:
 		return "unidentified-content"
 	}
-	switch strings.ToLower(info.SuggestedExtension) {
+}
+
+func unidentifiedMediaFallback(ext string) string {
+	switch strings.ToLower(ext) {
 	case "mp3", "m4a", "wav", "flac":
 		return "unidentified-audio"
 	case "mp4", "mov", "mkv", "avi":
 		return "unidentified-video"
 	default:
 		return "unidentified-media"
+	}
+}
+
+func unidentifiedImageFallback(ext string) string {
+	return "unidentified-image"
+}
+
+func filenameEvidenceSource(source string) bool {
+	switch source {
+	case "image-properties", "media-properties", "media-date":
+		return false
+	default:
+		return true
 	}
 }
 

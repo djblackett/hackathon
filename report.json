@@ -1,0 +1,200 @@
+{
+  "summary": {
+    "total_files": 17,
+    "planned_count": 17,
+    "copied_count": 0,
+    "skipped_count": 0,
+    "low_confidence_count": 1,
+    "ai_fallback_count": 0,
+    "warnings_count": 1
+  },
+  "entries": [
+    {
+      "source_path": "files/input/2026-01-22_00-59-57.mkv",
+      "destination_path": "files/output/matroska-webm-47-367000.mkv",
+      "suggested_name": "matroska-webm-47-367000.mkv",
+      "method": "metadata",
+      "confidence": 0.45999999999999996,
+      "evidence": [
+        "media-properties"
+      ],
+      "dry_run": true
+    },
+    {
+      "source_path": "files/input/BF^#(bgfysj.html",
+      "destination_path": "files/output/basics-photosynthesis.html",
+      "suggested_name": "basics-photosynthesis.html",
+      "method": "metadata",
+      "confidence": 0.95,
+      "evidence": [
+        "html-title"
+      ],
+      "dry_run": true
+    },
+    {
+      "source_path": "files/input/Retro Metro mix 2 (Dec 28) - 01 Start.wav",
+      "destination_path": "files/output/retro-metro-mix-dec-28-01-start.wav",
+      "suggested_name": "retro-metro-mix-dec-28-01-start.wav",
+      "method": "metadata",
+      "confidence": 0.9299999999999999,
+      "evidence": [
+        "media-filename"
+      ],
+      "dry_run": true
+    },
+    {
+      "source_path": "files/input/alice.mp4",
+      "destination_path": "files/output/alice.mp4",
+      "suggested_name": "alice.mp4",
+      "method": "metadata",
+      "confidence": 0.72,
+      "evidence": [
+        "media-filename"
+      ],
+      "dry_run": true
+    },
+    {
+      "source_path": "files/input/cliffs.png",
+      "destination_path": "files/output/png-image-1024x1024.png",
+      "suggested_name": "png-image-1024x1024.png",
+      "method": "metadata",
+      "confidence": 0.53,
+      "evidence": [
+        "image-properties"
+      ],
+      "warnings": [
+        "exiftool not available; image EXIF metadata skipped"
+      ],
+      "dry_run": true
+    },
+    {
+      "source_path": "files/input/json001.bin",
+      "destination_path": "files/output/quiz-sport-q1-question-which-one-correct-team.json",
+      "suggested_name": "quiz-sport-q1-question-which-one-correct-team.json",
+      "method": "metadata",
+      "confidence": 0.45999999999999996,
+      "evidence": [
+        "content"
+      ],
+      "dry_run": true
+    },
+    {
+      "source_path": "files/input/mrkdn",
+      "destination_path": "files/output/super-important-title.md",
+      "suggested_name": "super-important-title.md",
+      "method": "metadata",
+      "confidence": 0.95,
+      "evidence": [
+        "markdown-heading"
+      ],
+      "dry_run": true
+    },
+    {
+      "source_path": "files/input/customers-100.csv",
+      "destination_path": "files/output/customer-first-name-last-company-city-country-phone.csv",
+      "suggested_name": "customer-first-name-last-company-city-country-phone.csv",
+      "method": "metadata",
+      "confidence": 0.95,
+      "evidence": [
+        "csv-headers"
+      ],
+      "dry_run": true
+    },
+    {
+      "source_path": "files/input/nfuweiqobfioq",
+      "destination_path": "files/output/you-my-sunshine.musicxml",
+      "suggested_name": "you-my-sunshine.musicxml",
+      "method": "metadata",
+      "confidence": 0.95,
+      "evidence": [
+        "musicxml-work-title"
+      ],
+      "dry_run": true
+    },
+    {
+      "source_path": "files/input/pdf001.pdf",
+      "destination_path": "files/output/some-things-only-actually-potentially.pdf",
+      "suggested_name": "some-things-only-actually-potentially.pdf",
+      "method": "metadata",
+      "confidence": 0.8300000000000001,
+      "evidence": [
+        "pdf-first-text"
+      ],
+      "dry_run": true
+    },
+    {
+      "source_path": "files/input/text-files/f823939887.txt",
+      "destination_path": "files/output/text-files/unidentified-content.txt",
+      "suggested_name": "unidentified-content.txt",
+      "method": "metadata",
+      "confidence": 0.1,
+      "dry_run": true
+    },
+    {
+      "source_path": "files/input/text-files/text.txt",
+      "destination_path": "files/output/text-files/hello-there.txt",
+      "suggested_name": "hello-there.txt",
+      "method": "metadata",
+      "confidence": 0.61,
+      "evidence": [
+        "first-meaningful-line"
+      ],
+      "dry_run": true
+    },
+    {
+      "source_path": "files/input/text-files/text001.txt",
+      "destination_path": "files/output/text-files/hey-team.txt",
+      "suggested_name": "hey-team.txt",
+      "method": "metadata",
+      "confidence": 0.61,
+      "evidence": [
+        "first-meaningful-line"
+      ],
+      "dry_run": true
+    },
+    {
+      "source_path": "files/input/text-files/text002.txt",
+      "destination_path": "files/output/text-files/hi-jenna.txt",
+      "suggested_name": "hi-jenna.txt",
+      "method": "metadata",
+      "confidence": 0.61,
+      "evidence": [
+        "first-meaningful-line"
+      ],
+      "dry_run": true
+    },
+    {
+      "source_path": "files/input/text-files/text004.txt",
+      "destination_path": "files/output/text-files/hey-just-wanted-check-was-thinking-about-you.txt",
+      "suggested_name": "hey-just-wanted-check-was-thinking-about-you.txt",
+      "method": "metadata",
+      "confidence": 0.45999999999999996,
+      "evidence": [
+        "content"
+      ],
+      "dry_run": true
+    },
+    {
+      "source_path": "files/input/text-files/text003.txt",
+      "destination_path": "files/output/text-files/let-me-not-marriage-true-minds.txt",
+      "suggested_name": "let-me-not-marriage-true-minds.txt",
+      "method": "metadata",
+      "confidence": 0.69,
+      "evidence": [
+        "first-meaningful-line"
+      ],
+      "dry_run": true
+    },
+    {
+      "source_path": "files/input/sdfjgbfh4644623.docx",
+      "destination_path": "files/output/monumental-construction-panama-canal-completed-1914-stands-o.docx",
+      "suggested_name": "monumental-construction-panama-canal-completed-1914-stands-o.docx",
+      "method": "metadata",
+      "confidence": 0.6900000000000001,
+      "evidence": [
+        "office-text"
+      ],
+      "dry_run": true
+    }
+  ]
+}
