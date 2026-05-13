@@ -42,6 +42,9 @@ func TestMediaFilenameScorePrefersDescriptiveName(t *testing.T) {
 	if mediaFilenameScore("Retro Metro mix 2 Dec 28 01 Start") <= mediaFilenameScore("alice") {
 		t.Fatal("descriptive media filename should score higher than short basename")
 	}
+	if got := mediaFilenameScore("alice"); got < 0.75 {
+		t.Fatalf("alice score = %.2f, want copy-threshold friendly score", got)
+	}
 }
 
 func TestFFProbeMetadataUnavailable(t *testing.T) {

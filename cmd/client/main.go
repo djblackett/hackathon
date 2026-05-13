@@ -105,6 +105,14 @@ func runApp(args []string) error {
 				Name:  "apply-report",
 				Usage: "copy files using destinations from a previously generated JSON report",
 			},
+			&cli.BoolFlag{
+				Name:  "include-skipped",
+				Usage: "when applying a report, also copy skipped entries marked review_status=accepted",
+			},
+			&cli.StringFlag{
+				Name:  "review-report",
+				Usage: "write a Markdown review file for skipped or reviewed report entries",
+			},
 			&cli.StringSliceFlag{ // allowed extensions. Overrides defaultFileTypes.
 				Name:  "types",
 				Value: cli.NewStringSlice(defaultFileTypes...),
@@ -127,9 +135,11 @@ func runApp(args []string) error {
 			minConfidenceToCopy := c.Float64("min-confidence-to-copy")
 			reportPath := c.String("report")
 			applyReportPath := c.String("apply-report")
+			includeSkipped := c.Bool("include-skipped")
+			reviewReportPath := c.String("review-report")
 
 			if applyReportPath != "" {
-				return applyReport(applyReportPath, dry)
+				return applyReport(applyReportPath, dry, includeSkipped, reviewReportPath)
 			}
 
 			switch strategy {
@@ -241,9 +251,11 @@ func runApp(args []string) error {
 
 				skipped := false
 				skipReason := ""
+				reviewStatus := ""
 				if !dry && !renameMode && minConfidenceToCopy > 0 && confidence < minConfidenceToCopy {
 					skipped = true
 					skipReason = fmt.Sprintf("confidence %.2f below copy threshold %.2f", confidence, minConfidenceToCopy)
+					reviewStatus = "pending"
 				}
 
 				reportMu.Lock()
@@ -258,6 +270,7 @@ func runApp(args []string) error {
 					DryRun:          dry,
 					Skipped:         skipped,
 					SkipReason:      skipReason,
+					ReviewStatus:    reviewStatus,
 				})
 				reportMu.Unlock()
 
@@ -296,6 +309,11 @@ func runApp(args []string) error {
 			if err := report.Write(reportPath, reportEntries); err != nil {
 				return err
 			}
+			if reviewReportPath != "" {
+				if err := writeReviewFromEntries(reviewReportPath, reportEntries); err != nil {
+					return err
+				}
+			}
 
 			var (
 				firstErr error   // keeps behaviour for non‑debug
@@ -324,10 +342,15 @@ func runApp(args []string) error {
 	return app.Run(args)
 }
 
-func applyReport(path string, dry bool) error {
+func applyReport(path string, dry bool, includeSkipped bool, reviewReportPath string) error {
 	planned, err := report.Read(path)
 	if err != nil {
 		return err
+	}
+	if reviewReportPath != "" {
+		if err := report.WriteReviewMarkdown(reviewReportPath, planned); err != nil {
+			return err
+		}
 	}
 
 	for i, entry := range planned.Entries {
@@ -347,8 +370,11 @@ func applyReport(path string, dry bool) error {
 			return fmt.Errorf("report entry %d source file could not be checked: %s: %w", i, entry.SourcePath, err)
 		}
 		if entry.Skipped {
-			log.Printf("[SKIP] %s  →  %s method=apply-report reason=%s\n", entry.SourcePath, entry.DestinationPath, entry.SkipReason)
-			continue
+			status := report.NormalizeReviewStatus(entry.ReviewStatus)
+			if !includeSkipped || status != "accepted" {
+				log.Printf("[SKIP] %s  →  %s method=apply-report status=%s reason=%s\n", entry.SourcePath, entry.DestinationPath, status, entry.SkipReason)
+				continue
+			}
 		}
 		if dry {
 			log.Printf("[DRY] %s  →  %s method=apply-report confidence=%.2f\n", entry.SourcePath, entry.DestinationPath, entry.Confidence)
@@ -360,4 +386,11 @@ func applyReport(path string, dry bool) error {
 		log.Printf("[APPLY] %s  →  %s\n", entry.SourcePath, entry.DestinationPath)
 	}
 	return nil
+}
+
+func writeReviewFromEntries(path string, entries []report.Entry) error {
+	return report.WriteReviewMarkdown(path, report.Report{
+		Summary: report.BuildSummary(entries),
+		Entries: entries,
+	})
 }

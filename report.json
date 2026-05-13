@@ -1,24 +1,23 @@
 {
   "summary": {
     "total_files": 17,
-    "planned_count": 17,
-    "copied_count": 0,
-    "skipped_count": 0,
-    "low_confidence_count": 1,
+    "planned_count": 6,
+    "copied_count": 6,
+    "skipped_count": 11,
+    "low_confidence_count": 3,
     "ai_fallback_count": 0,
     "warnings_count": 1
   },
   "entries": [
     {
       "source_path": "files/input/2026-01-22_00-59-57.mkv",
-      "destination_path": "files/output/matroska-webm-47-367000.mkv",
-      "suggested_name": "matroska-webm-47-367000.mkv",
+      "destination_path": "files/output/unidentified-video.mkv",
+      "suggested_name": "unidentified-video.mkv",
       "method": "metadata",
-      "confidence": 0.45999999999999996,
-      "evidence": [
-        "media-properties"
-      ],
-      "dry_run": true
+      "confidence": 0.1,
+      "dry_run": false,
+      "skipped": true,
+      "skip_reason": "confidence 0.10 below copy threshold 0.75"
     },
     {
       "source_path": "files/input/BF^#(bgfysj.html",
@@ -29,7 +28,7 @@
       "evidence": [
         "html-title"
       ],
-      "dry_run": true
+      "dry_run": false
     },
     {
       "source_path": "files/input/Retro Metro mix 2 (Dec 28) - 01 Start.wav",
@@ -40,7 +39,7 @@
       "evidence": [
         "media-filename"
       ],
-      "dry_run": true
+      "dry_run": false
     },
     {
       "source_path": "files/input/alice.mp4",
@@ -51,21 +50,22 @@
       "evidence": [
         "media-filename"
       ],
-      "dry_run": true
+      "dry_run": false,
+      "skipped": true,
+      "skip_reason": "confidence 0.72 below copy threshold 0.75"
     },
     {
       "source_path": "files/input/cliffs.png",
-      "destination_path": "files/output/png-image-1024x1024.png",
-      "suggested_name": "png-image-1024x1024.png",
+      "destination_path": "files/output/unidentified-image.png",
+      "suggested_name": "unidentified-image.png",
       "method": "metadata",
-      "confidence": 0.53,
-      "evidence": [
-        "image-properties"
-      ],
+      "confidence": 0.1,
       "warnings": [
         "exiftool not available; image EXIF metadata skipped"
       ],
-      "dry_run": true
+      "dry_run": false,
+      "skipped": true,
+      "skip_reason": "confidence 0.10 below copy threshold 0.75"
     },
     {
       "source_path": "files/input/json001.bin",
@@ -76,7 +76,9 @@
       "evidence": [
         "content"
       ],
-      "dry_run": true
+      "dry_run": false,
+      "skipped": true,
+      "skip_reason": "confidence 0.46 below copy threshold 0.75"
     },
     {
       "source_path": "files/input/mrkdn",
@@ -87,7 +89,7 @@
       "evidence": [
         "markdown-heading"
       ],
-      "dry_run": true
+      "dry_run": false
     },
     {
       "source_path": "files/input/customers-100.csv",
@@ -98,7 +100,7 @@
       "evidence": [
         "csv-headers"
       ],
-      "dry_run": true
+      "dry_run": false
     },
     {
       "source_path": "files/input/nfuweiqobfioq",
@@ -109,7 +111,7 @@
       "evidence": [
         "musicxml-work-title"
       ],
-      "dry_run": true
+      "dry_run": false
     },
     {
       "source_path": "files/input/pdf001.pdf",
@@ -120,15 +122,7 @@
       "evidence": [
         "pdf-first-text"
       ],
-      "dry_run": true
-    },
-    {
-      "source_path": "files/input/text-files/f823939887.txt",
-      "destination_path": "files/output/text-files/unidentified-content.txt",
-      "suggested_name": "unidentified-content.txt",
-      "method": "metadata",
-      "confidence": 0.1,
-      "dry_run": true
+      "dry_run": false
     },
     {
       "source_path": "files/input/text-files/text.txt",
@@ -139,18 +133,19 @@
       "evidence": [
         "first-meaningful-line"
       ],
-      "dry_run": true
+      "dry_run": false,
+      "skipped": true,
+      "skip_reason": "confidence 0.61 below copy threshold 0.75"
     },
     {
-      "source_path": "files/input/text-files/text001.txt",
-      "destination_path": "files/output/text-files/hey-team.txt",
-      "suggested_name": "hey-team.txt",
+      "source_path": "files/input/text-files/f823939887.txt",
+      "destination_path": "files/output/text-files/unidentified-content.txt",
+      "suggested_name": "unidentified-content.txt",
       "method": "metadata",
-      "confidence": 0.61,
-      "evidence": [
-        "first-meaningful-line"
-      ],
-      "dry_run": true
+      "confidence": 0.1,
+      "dry_run": false,
+      "skipped": true,
+      "skip_reason": "confidence 0.10 below copy threshold 0.75"
     },
     {
       "source_path": "files/input/text-files/text002.txt",
@@ -161,7 +156,22 @@
       "evidence": [
         "first-meaningful-line"
       ],
-      "dry_run": true
+      "dry_run": false,
+      "skipped": true,
+      "skip_reason": "confidence 0.61 below copy threshold 0.75"
+    },
+    {
+      "source_path": "files/input/text-files/text001.txt",
+      "destination_path": "files/output/text-files/hey-team.txt",
+      "suggested_name": "hey-team.txt",
+      "method": "metadata",
+      "confidence": 0.61,
+      "evidence": [
+        "first-meaningful-line"
+      ],
+      "dry_run": false,
+      "skipped": true,
+      "skip_reason": "confidence 0.61 below copy threshold 0.75"
     },
     {
       "source_path": "files/input/text-files/text004.txt",
@@ -172,18 +182,9 @@
       "evidence": [
         "content"
       ],
-      "dry_run": true
-    },
-    {
-      "source_path": "files/input/text-files/text003.txt",
-      "destination_path": "files/output/text-files/let-me-not-marriage-true-minds.txt",
-      "suggested_name": "let-me-not-marriage-true-minds.txt",
-      "method": "metadata",
-      "confidence": 0.69,
-      "evidence": [
-        "first-meaningful-line"
-      ],
-      "dry_run": true
+      "dry_run": false,
+      "skipped": true,
+      "skip_reason": "confidence 0.46 below copy threshold 0.75"
     },
     {
       "source_path": "files/input/sdfjgbfh4644623.docx",
@@ -194,7 +195,22 @@
       "evidence": [
         "office-text"
       ],
-      "dry_run": true
+      "dry_run": false,
+      "skipped": true,
+      "skip_reason": "confidence 0.69 below copy threshold 0.75"
+    },
+    {
+      "source_path": "files/input/text-files/text003.txt",
+      "destination_path": "files/output/text-files/let-me-not-marriage-true-minds.txt",
+      "suggested_name": "let-me-not-marriage-true-minds.txt",
+      "method": "metadata",
+      "confidence": 0.69,
+      "evidence": [
+        "first-meaningful-line"
+      ],
+      "dry_run": false,
+      "skipped": true,
+      "skip_reason": "confidence 0.69 below copy threshold 0.75"
     }
   ]
 }

@@ -80,7 +80,7 @@ A web server that provides AI filename suggestion services via HTTP API, deploya
 - **Plugin architecture:** The modular extractor system makes adding new file types straightforward.
 - **Easy deployment:** The CLI selects a backend automatically based on configuration.
 - **Concurrent processing:** Batch processing supports configurable concurrency.
-- **Review workflow:** Dry-run reports can be inspected and later applied with `--apply-report`.
+- **Review workflow:** Dry-run and copy reports can be inspected, exported to Markdown for review, edited, and later applied with `--apply-report`.
 - **Safety controls:** Default behavior copies files instead of renaming in place, handles collisions, and can skip low-confidence copies.
 
 ## Quick Start
@@ -165,6 +165,8 @@ go run ./cmd/client/main.go --input ./files/input --dry-run
 | `--min-confidence-to-copy` | Minimum confidence required before copying files; `0` disables copy skipping | `0` |
 | `--report` | Write a JSON report of processed files | none |
 | `--apply-report` | Copy files using destinations from a previous JSON report | none |
+| `--include-skipped` | When applying a report, also copy skipped entries marked `review_status=accepted` | `false` |
+| `--review-report` | Write a Markdown review file for skipped or reviewed report entries | none |
 
 ### Examples
 
@@ -195,6 +197,12 @@ go run ./cmd/client/main.go --input ./files/input --dry-run
 
 # Copy only confident local matches; weak matches stay in the report as skipped
 ./ai-renamer --input ./recovered --strategy metadata-only --min-confidence-to-copy 0.75 --report report.json
+
+# Generate a Markdown review file for skipped entries
+./ai-renamer --input ./recovered --strategy metadata-only --min-confidence-to-copy 0.75 --report report.json --review-report review.md
+
+# After editing report.json and setting selected skipped entries to "review_status": "accepted"
+./ai-renamer --apply-report report.json --include-skipped
 
 # Copy to custom output directory with flattened structure
 ./ai-renamer --input ./files --output ./renamed --flatten

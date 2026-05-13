@@ -146,6 +146,9 @@ func TestClientCopyModeSkipsLowConfidenceFiles(t *testing.T) {
 	if !random.Skipped {
 		t.Fatalf("random.txt should be skipped: %+v", random)
 	}
+	if random.ReviewStatus != "pending" {
+		t.Fatalf("review status = %q, want pending", random.ReviewStatus)
+	}
 	if !strings.Contains(random.SkipReason, "below copy threshold") {
 		t.Fatalf("skip reason = %q", random.SkipReason)
 	}
@@ -164,6 +167,34 @@ func TestClientCopyModeSkipsLowConfidenceFiles(t *testing.T) {
 	}
 	if got.Summary.CopiedCount != 1 {
 		t.Fatalf("summary copied = %d, want 1", got.Summary.CopiedCount)
+	}
+}
+
+func TestClientWritesReviewReport(t *testing.T) {
+	root := repoRoot(t)
+	outputDir := t.TempDir()
+	reportPath := filepath.Join(t.TempDir(), "report.json")
+	reviewPath := filepath.Join(t.TempDir(), "review.md")
+
+	runClient(t, root,
+		"--strategy", "metadata-only",
+		"--input", filepath.Join(root, "testdata/recovered"),
+		"--output", outputDir,
+		"--types", "text,markdown",
+		"--min-confidence-to-copy", "0.75",
+		"--report", reportPath,
+		"--review-report", reviewPath,
+	)
+
+	data, err := os.ReadFile(reviewPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := string(data)
+	for _, want := range []string{"# File Rename Review", "random.txt", "pending"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("review report missing %q:\n%s", want, got)
+		}
 	}
 }
 
@@ -223,7 +254,7 @@ func TestApplyReportReturnsMissingSourceError(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err := applyReport(reportPath, false)
+	err := applyReport(reportPath, false, false, "")
 	if err == nil {
 		t.Fatal("expected missing source error")
 	}
@@ -246,7 +277,7 @@ func TestApplyReportValidatesEmptyEntries(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err := applyReport(reportPath, false)
+	err := applyReport(reportPath, false, false, "")
 	if err == nil {
 		t.Fatal("expected empty source error")
 	}
@@ -271,11 +302,76 @@ func TestApplyReportSkipsReportSkippedEntries(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := applyReport(reportPath, false); err != nil {
+	if err := applyReport(reportPath, false, false, ""); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(dest); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("skipped report entry should not copy destination, stat err=%v", err)
+	}
+}
+
+func TestApplyReportIncludesAcceptedSkippedEntries(t *testing.T) {
+	dir := t.TempDir()
+	source := filepath.Join(dir, "source.txt")
+	acceptedDest := filepath.Join(dir, "accepted.txt")
+	pendingDest := filepath.Join(dir, "pending.txt")
+	reportPath := filepath.Join(dir, "report.json")
+	if err := os.WriteFile(source, []byte("source"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := report.Write(reportPath, []report.Entry{
+		{
+			SourcePath:      source,
+			DestinationPath: acceptedDest,
+			Skipped:         true,
+			SkipReason:      "reviewed",
+			ReviewStatus:    "accepted",
+		},
+		{
+			SourcePath:      source,
+			DestinationPath: pendingDest,
+			Skipped:         true,
+			SkipReason:      "not reviewed",
+			ReviewStatus:    "pending",
+		},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := applyReport(reportPath, false, true, ""); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(acceptedDest); err != nil {
+		t.Fatalf("accepted skipped entry should copy: %v", err)
+	}
+	if _, err := os.Stat(pendingDest); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("pending skipped entry should not copy, stat err=%v", err)
+	}
+}
+
+func TestApplyReportCanWriteReviewReport(t *testing.T) {
+	dir := t.TempDir()
+	source := filepath.Join(dir, "source.txt")
+	dest := filepath.Join(dir, "dest.txt")
+	reportPath := filepath.Join(dir, "report.json")
+	reviewPath := filepath.Join(dir, "review.md")
+	if err := os.WriteFile(source, []byte("source"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := report.Write(reportPath, []report.Entry{{
+		SourcePath:      source,
+		DestinationPath: dest,
+		Skipped:         true,
+		ReviewStatus:    "pending",
+	}}); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := applyReport(reportPath, true, false, reviewPath); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(reviewPath); err != nil {
+		t.Fatalf("expected review report: %v", err)
 	}
 }
 

@@ -181,7 +181,7 @@ func mediaFilenameScore(name string) float64 {
 		return 0.52
 	}
 	if len(words) <= 2 {
-		return 0.72
+		return 0.75
 	}
 	return 0.82
 }

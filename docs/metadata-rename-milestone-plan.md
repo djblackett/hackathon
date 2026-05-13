@@ -227,6 +227,10 @@ Completed deliverables:
   - add `--min-confidence-to-copy`
   - mark skipped report entries with a reason
   - validate `--apply-report` entries before copying
+  - add `review_status` and `review_note` fields for manual review
+  - add `--review-report` Markdown output for skipped/reviewed entries
+  - add `--include-skipped` so accepted skipped entries can be copied during apply
+  - tune meaningful media basenames so names like `alice.mp4` can pass a `0.75` copy threshold
 
 Remaining candidates:
 
