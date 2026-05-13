@@ -180,15 +180,15 @@ Goal: reduce bad names, make batch runs auditable, and make real recovered-file 
 
 Deliverables:
 
-- Maintain a small recovered-file fixture corpus in `testdata/recovered/`.
-- Add CLI integration tests that run dry-run report generation against the fixture corpus.
-- Add collision tests for duplicate generated names.
-- Improve low-confidence handling so random-looking text becomes `unidentified-content` instead of a bogus filename.
-- Add report-driven review mode:
+- Maintain a small recovered-file fixture corpus in `testdata/recovered/`. Done.
+- Add CLI integration tests that run dry-run report generation against the fixture corpus. Done.
+- Add collision tests for duplicate generated names. Done.
+- Improve low-confidence handling so random-looking text becomes `unidentified-content` instead of a bogus filename. Done.
+- Add report-driven review mode. Done:
   - generate a report with `--dry-run --report report.json`
   - inspect or edit the report
   - apply it later with `--apply-report report.json`
-- Improve Office evidence extraction:
+- Improve Office evidence extraction. Started:
   - workbook sheet names
   - spreadsheet first-row headers
   - presentation slide titles
@@ -201,6 +201,41 @@ Success criteria:
 - Random content stays low confidence and can trigger AI fallback in `auto`.
 - Office files produce more useful local evidence before AI fallback.
 
+## Milestone 8: Format Quality Expansion
+
+Goal: improve local naming quality for common recovered formats without increasing AI use.
+
+Completed deliverables:
+
+- HTML quality pass:
+  - extract `<title>`, first `<h1>`, meta description, OpenGraph title, and OpenGraph description
+  - restore `.html` for extensionless or wrong-extension HTML
+  - add recovered HTML fixture coverage
+- XML and MusicXML support:
+  - detect XML by content
+  - detect MusicXML as a subtype
+  - extract generic XML root/title/name/creator fields
+  - extract MusicXML work title, movement title, creator/composer, and part names
+  - restore `.xml` and `.musicxml`
+- Media quality tuning:
+  - use embedded title/artist/album tags when `ffprobe` is available
+  - keep meaningful media basenames such as `alice.mp4`
+  - reject timestamp, camera-style, and random-looking media names
+  - use `unidentified-audio`, `unidentified-video`, and `unidentified-media` for weak local evidence
+- Review workflow hardening:
+  - add report summary stats
+  - add `--min-confidence-to-copy`
+  - mark skipped report entries with a reason
+  - validate `--apply-report` entries before copying
+
+Remaining candidates:
+
+- Add OCR for scanned PDFs and images.
+- Add realistic user-provided media fixtures with real title/artist/album/video metadata.
+- Add realistic EXIF-rich photo fixtures.
+- Add corrupted or partially recovered Office/PDF/media fixtures.
+- Add more XLSX/PPTX real-world examples with messy sheet names and slide layouts.
+
 ## Starting Recommendation
 
-Start with Milestone 1 only. It delivers the core architectural improvement without taking on every possible file format at once.
+Milestones 1 through 8 now form the baseline. The next practical work should focus on realistic sample coverage and OCR, not more broad architecture.

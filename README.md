@@ -32,7 +32,7 @@ This project was developed with AI assistance to accelerate development. While t
 
 ### Project Reflections
 
-Initially, I envisioned a simple CLI tool to solve a personal problem: renaming poorly named files recovered from a damaged filesystem. What started as a basic file renamer evolved into a comprehensive solution with multiple AI backends, robust DevOps configurations, and production-ready deployment options.
+Initially, I envisioned a simple CLI tool to solve a personal problem: renaming poorly named files recovered from a damaged filesystem. What started as a basic file renamer evolved into a metadata-first recovery tool with optional AI fallback, multiple AI backends, robust DevOps configurations, and production-ready deployment options.
 
 **Key learnings from this hackathon:**
 
@@ -42,9 +42,9 @@ I also learned that investing time in proper infrastructure really pays off. The
 
 **Challenges and trade-offs:**
 
-The main limitation as the deadline approached was file type support. While the plugin-based extractor system is designed for easy extensibility, I prioritized building a solid foundation over breadth of formats. The current implementation handles common text-based files well, but expanding to office documents and OCR for image-based PDFs (via Tesseract and Pandoc) remains on the roadmap.
+The main limitation as the deadline approached was file type support. While the plugin-based extractor system is designed for easy extensibility, I prioritized building a solid foundation over breadth of formats. The current implementation handles common text files, PDFs, JSON, CSV, HTML, XML, MusicXML, Office documents, email, image metadata, and media metadata. OCR for scanned PDFs and image-based documents remains on the roadmap.
 
-Another consideration is that the current approach reads entire file contents for AI analysis, which isn't practical for large files. While I've implemented some optimization strategies like reading only the first few lines of CSV files, this approach needs to be expanded to other file types with smart content sampling, metadata extraction from documents, and intelligent truncation for large text files to minimize API costs and improve performance.
+Another consideration is that AI calls should be used sparingly. The current client now extracts local metadata and high-signal snippets first, then sends compact evidence to AI only when the local confidence is low. This keeps token use down and avoids sending full file contents by default.
 
 I may have over-engineered the DevOps infrastructure, but Lane's emphasis on making projects "as easy as possible to run" resonated strongly. The comprehensive deployment options, ranging from simple remote server usage to full Kubernetes deployments, demonstrate production-readiness while maintaining simplicity for end users.
 
@@ -58,7 +58,7 @@ This project provides a unified CLI tool with three different AI backend options
 
 ### CLI Client (`cmd/client/`)
 
-A command-line tool that scans directories for poorly named files and uses AI to suggest better filenames based on content. The CLI can operate in three modes:
+A command-line tool that scans directories for poorly named files and suggests better filenames based on local metadata, content evidence, and optional AI fallback. The CLI can operate in three modes:
 
 1. **Direct OpenAI mode:** When `OPENAI_API_KEY` is provided, the CLI communicates directly with the OpenAI API.
 2. **Local Ollama mode:** Use the `--local` flag to process files with a local Ollama instance.
@@ -70,7 +70,9 @@ A web server that provides AI filename suggestion services via HTTP API, deploya
 
 ## Features
 
-- **Multi-format support:** Scans text, Markdown, CSV, PDF, JSON, HTML, config/log files, Office documents, email files, image metadata, and media metadata.
+- **Multi-format support:** Scans text, Markdown, CSV, PDF, JSON, HTML, XML, MusicXML, config/log files, Office documents, email files, image metadata, and media metadata.
+- **Metadata-first naming:** Can rename many recovered files without AI by using internal metadata, headings, document properties, CSV headers, XML fields, and other local evidence.
+- **Wrong-extension recovery:** Detects common file types from content, so files such as extensionless PDFs or `.bin` JSON/XML files can still be processed.
 - **Flexible AI backends:** Supports direct OpenAI, local Ollama, and a remote Fly.io server.
 - **Clean naming:** Generates kebab-case filenames based on file content.
 - **Privacy-focused local mode:** Local Ollama mode keeps all file content on your machine.
@@ -78,7 +80,8 @@ A web server that provides AI filename suggestion services via HTTP API, deploya
 - **Plugin architecture:** The modular extractor system makes adding new file types straightforward.
 - **Easy deployment:** The CLI selects a backend automatically based on configuration.
 - **Concurrent processing:** Batch processing supports configurable concurrency.
-- **Smart filtering:** Already well-named files can be skipped automatically.
+- **Review workflow:** Dry-run reports can be inspected and later applied with `--apply-report`.
+- **Safety controls:** Default behavior copies files instead of renaming in place, handles collisions, and can skip low-confidence copies.
 
 ## Quick Start
 
@@ -106,8 +109,8 @@ For the fastest path, put files in `files/input/` and run the client:
 # Put your files here, or use the provided sample files
 cp /path/to/your/files/* files/input/
 
-# Run with default settings. This uses the remote server.
-go run ./cmd/client/main.go
+# Run metadata-only first. This does not call AI.
+go run ./cmd/client/main.go --strategy metadata-only --report report.json
 
 # Renamed files will appear in files/output/
 ```
@@ -149,7 +152,7 @@ go run ./cmd/client/main.go --input ./files/input --dry-run
 |------|-------------|---------|
 | `--input` | Directory to scan for files | `files/input` |
 | `--output` | Output directory for processed files | `files/output` |
-| `--types` | File extensions or detected content types to process (comma-separated) | `txt,text,md,markdown,csv,pdf,json,html,log,cfg,ini,docx,xlsx,pptx,office,eml,email,image,media` |
+| `--types` | File extensions or detected content types to process (comma-separated) | `txt,text,md,markdown,csv,pdf,json,html,xml,musicxml,log,cfg,ini,docx,xlsx,pptx,office,eml,email,image,media` |
 | `--local` | Use local Ollama instead of OpenAI | `false` |
 | `--model` | AI model name | `gpt-3.5-turbo` (OpenAI) / `mistral` (Ollama) |
 | `--dry-run` | Preview changes without processing | `false` |
@@ -159,6 +162,7 @@ go run ./cmd/client/main.go --input ./files/input --dry-run
 | `--strategy` | Rename strategy: `auto`, `metadata-only`, or `ai-only` | `auto` |
 | `--confidence-threshold` | Minimum local confidence before `auto` skips AI fallback | `0.75` |
 | `--max-ai-chars` | Maximum compact evidence characters sent to AI in `auto` mode | `2000` |
+| `--min-confidence-to-copy` | Minimum confidence required before copying files; `0` disables copy skipping | `0` |
 | `--report` | Write a JSON report of processed files | none |
 | `--apply-report` | Copy files using destinations from a previous JSON report | none |
 
@@ -188,6 +192,9 @@ go run ./cmd/client/main.go --input ./files/input --dry-run
 
 # Apply a reviewed dry-run report
 ./ai-renamer --apply-report report.json
+
+# Copy only confident local matches; weak matches stay in the report as skipped
+./ai-renamer --input ./recovered --strategy metadata-only --min-confidence-to-copy 0.75 --report report.json
 
 # Copy to custom output directory with flattened structure
 ./ai-renamer --input ./files --output ./renamed --flatten
@@ -230,10 +237,7 @@ Set `evidence_only` to `true` when `content` contains compact metadata and ranke
 
 **Supported Models:**
 
-- `gpt-3.5-turbo`
-- `gpt-4`
-- `gpt-4o`
-- `gpt-4-1106-preview`
+The server accepts the model name supplied by the client or environment configuration. Exact model availability depends on the configured backend.
 
 **Example:**
 
@@ -262,6 +266,14 @@ docker compose -f ollama.docker-compose.yaml up ollama
 
 This ensures no file content is sent to external APIs.
 
+For an even stricter local workflow, start with:
+
+```bash
+go run ./cmd/client/main.go --input ./files/input --strategy metadata-only --dry-run --report report.json
+```
+
+This mode does not call OpenAI, Ollama, or the remote server.
+
 ## Deployment
 
 ### Server Deployment
@@ -288,6 +300,11 @@ This project includes comprehensive DevOps configurations:
 - [x] OpenAI integration
 - [x] Local Ollama support
 - [x] PDF content extraction
+- [x] Metadata-only rename strategy
+- [x] Wrong-extension file detection
+- [x] JSON, CSV, HTML, XML, MusicXML, Office, email, image metadata, and media metadata extraction
+- [x] Dry-run JSON reports and report application
+- [x] Collision-safe non-destructive copying
 - [x] HTTP API server
 - [x] Fly.io deployment
 - [x] Kubernetes deployment config
