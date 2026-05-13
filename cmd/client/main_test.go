@@ -83,7 +83,7 @@ func TestClientDryRunReportRecoveredCorpus(t *testing.T) {
 	assertGoldenReport(t, got, map[string]goldenEntry{
 		"customer-a.csv":     {Suggested: "name-email-status.csv", Method: "metadata", Evidence: "csv-headers"},
 		"customer-b.csv":     {Suggested: "name-email-status.csv", Method: "metadata", Evidence: "csv-headers"},
-		"file0007":           {Dest: "quiz-sport-q1-question-which-one-correct-team.json", Suggested: "quiz-sport-q1-question-which-one-correct-team.json", Method: "metadata", Evidence: "content"},
+		"file0007":           {Dest: "quiz-sport-q1-question-which-one-correct-team.json", Suggested: "quiz-sport-q1-question-which-one-correct-team.json", Method: "metadata", Evidence: "json-structured"},
 		"markdown-note":      {Dest: "incident-response-runbook.md", Suggested: "incident-response-runbook.md", Method: "metadata", Evidence: "markdown-heading"},
 		"message":            {Dest: "customer-onboarding-checklist.eml", Suggested: "customer-onboarding-checklist.eml", Method: "metadata", Evidence: "email-subject"},
 		"random.txt":         {Dest: "unidentified-content.txt", Suggested: "unidentified-content.txt", Method: "metadata"},

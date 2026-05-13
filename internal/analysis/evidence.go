@@ -86,6 +86,8 @@ func sourceWeight(source string) float64 {
 		return 0.82
 	case "json-keys":
 		return 0.78
+	case "json-structured":
+		return 0.84
 	case "xml-creator":
 		return 0.68
 	case "musicxml-parts":

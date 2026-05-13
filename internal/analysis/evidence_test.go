@@ -67,6 +67,28 @@ func TestGenerateFilenameFromJSONKeys(t *testing.T) {
 	}
 }
 
+func TestGenerateFilenameFromJSONStructuredEvidence(t *testing.T) {
+	info := extractors.ExtractedFileInfo{
+		DetectedType: "json",
+		TextSamples: []extractors.TextSample{
+			{Source: "content", Text: "Which one is correct team name in NBA?", Score: 0.35},
+			{Source: "json-structured", Text: "quiz sport q1 question Which one is correct team name in NBA?", Score: 0.84},
+		},
+	}
+
+	got := GenerateFilename(info)
+
+	if got.Filename != "quiz-sport-q1-question-which-one-correct-team" {
+		t.Fatalf("filename = %q", got.Filename)
+	}
+	if got.Confidence < 0.75 {
+		t.Fatalf("confidence = %.2f, want high confidence", got.Confidence)
+	}
+	if got.Evidence[0] != "json-structured" {
+		t.Fatalf("evidence = %+v, want json-structured first", got.Evidence)
+	}
+}
+
 func TestCompactEvidenceUsesRankedSamples(t *testing.T) {
 	info := extractors.ExtractedFileInfo{
 		DetectedType: "html",
