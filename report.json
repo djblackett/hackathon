@@ -1,27 +1,27 @@
 {
   "summary": {
     "total_files": 17,
-    "planned_count": 13,
+    "planned_count": 15,
     "copied_count": 0,
-    "skipped_count": 4,
-    "low_confidence_count": 3,
+    "skipped_count": 2,
+    "low_confidence_count": 1,
     "ai_fallback_count": 0,
     "warnings_count": 1,
-    "pending_review_count": 4,
+    "pending_review_count": 2,
     "accepted_count": 0,
     "rejected_count": 0
   },
   "entries": [
     {
       "source_path": "files/input/2026-01-22_00-59-57.mkv",
-      "destination_path": "files/output/unidentified-video.mkv",
-      "suggested_name": "unidentified-video.mkv",
+      "destination_path": "files/output/video-2026-01-22-00-59-57.mkv",
+      "suggested_name": "video-2026-01-22-00-59-57.mkv",
       "method": "metadata",
-      "confidence": 0.1,
-      "dry_run": true,
-      "skipped": true,
-      "skip_reason": "confidence 0.10 below copy threshold 0.75",
-      "review_status": "pending"
+      "confidence": 0.8500000000000001,
+      "evidence": [
+        "media-timestamp"
+      ],
+      "dry_run": true
     },
     {
       "source_path": "files/input/BF^#(bgfysj.html",
@@ -58,17 +58,17 @@
     },
     {
       "source_path": "files/input/cliffs.png",
-      "destination_path": "files/output/unidentified-image.png",
-      "suggested_name": "unidentified-image.png",
+      "destination_path": "files/output/cliffs.png",
+      "suggested_name": "cliffs.png",
       "method": "metadata",
-      "confidence": 0.1,
+      "confidence": 0.75,
+      "evidence": [
+        "image-filename"
+      ],
       "warnings": [
         "exiftool not available; image EXIF metadata skipped"
       ],
-      "dry_run": true,
-      "skipped": true,
-      "skip_reason": "confidence 0.10 below copy threshold 0.75",
-      "review_status": "pending"
+      "dry_run": true
     },
     {
       "source_path": "files/input/customers-100.csv",
@@ -149,16 +149,16 @@
     },
     {
       "source_path": "files/input/text-files/text.txt",
-      "destination_path": "files/output/text-files/hello-there.txt",
-      "suggested_name": "hello-there.txt",
+      "destination_path": "files/output/text-files/hello-there-general-kenobi-roger.txt",
+      "suggested_name": "hello-there-general-kenobi-roger.txt",
       "method": "metadata",
-      "confidence": 0.61,
+      "confidence": 0.69,
       "evidence": [
-        "first-meaningful-line"
+        "short-text-note"
       ],
       "dry_run": true,
       "skipped": true,
-      "skip_reason": "confidence 0.61 below copy threshold 0.75",
+      "skip_reason": "confidence 0.69 below copy threshold 0.75",
       "review_status": "pending"
     },
     {

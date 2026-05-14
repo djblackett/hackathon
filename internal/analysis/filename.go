@@ -24,11 +24,11 @@ var wordPattern = regexp.MustCompile(`[a-zA-Z0-9]+`)
 
 var stopWords = map[string]struct{}{
 	"a": {}, "an": {}, "and": {}, "are": {}, "as": {}, "at": {}, "be": {}, "by": {},
-	"attached": {}, "audio": {}, "been": {}, "check": {}, "earlier": {}, "find": {},
+	"attached": {}, "been": {}, "check": {}, "earlier": {}, "find": {},
 	"for": {}, "from": {}, "has": {}, "heads": {}, "in": {}, "include": {}, "includes": {},
 	"is": {}, "it": {}, "just": {}, "of": {}, "on": {}, "or": {}, "please": {}, "reason": {},
 	"that": {}, "the": {}, "this": {}, "to": {}, "today": {}, "up": {},
-	"video": {}, "wanted": {}, "was": {}, "with": {},
+	"wanted": {}, "was": {}, "with": {},
 }
 
 var genericWords = map[string]struct{}{
@@ -120,7 +120,12 @@ func filenameEvidenceSource(source string) bool {
 }
 
 func allowSingleWordEvidence(source string, words []string) bool {
-	return source == "media-filename" && len(words) == 1 && len(words[0]) >= 4
+	switch source {
+	case "media-filename", "image-filename":
+		return len(words) == 1 && len(words[0]) >= 4
+	default:
+		return false
+	}
 }
 
 func CompactEvidence(info extractors.ExtractedFileInfo, maxChars int) string {

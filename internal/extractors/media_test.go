@@ -13,6 +13,13 @@ func TestMeaningfulMediaBasenameRejectsTimestamp(t *testing.T) {
 	}
 }
 
+func TestMediaTimestampBasenameUsesMediaKind(t *testing.T) {
+	got := mediaTimestampBasename("2026-01-22_00-59-57.mkv", "mkv")
+	if got != "video 2026 01 22 00 59 57" {
+		t.Fatalf("timestamp basename = %q", got)
+	}
+}
+
 func TestMeaningfulMediaBasenameRejectsCameraTimestamp(t *testing.T) {
 	cases := []string{
 		"VID_20240201_103312.mp4",
@@ -23,6 +30,12 @@ func TestMeaningfulMediaBasenameRejectsCameraTimestamp(t *testing.T) {
 		if got := meaningfulMediaBasename(path); got != "" {
 			t.Fatalf("%s basename = %q, want empty", path, got)
 		}
+	}
+}
+
+func TestMediaTimestampBasenameRejectsCameraTimestamp(t *testing.T) {
+	if got := mediaTimestampBasename("VID_20240201_103312.mp4", "mp4"); got != "" {
+		t.Fatalf("timestamp basename = %q, want empty", got)
 	}
 }
 
@@ -93,6 +106,23 @@ func TestMediaExtractorUsesBasenameWhenFFProbeUnavailable(t *testing.T) {
 	}
 	if len(info.Warnings) == 0 {
 		t.Fatal("expected ffprobe warning")
+	}
+}
+
+func TestMediaExtractorUsesTimestampBasenameWhenFFProbeUnavailable(t *testing.T) {
+	t.Setenv("PATH", "")
+	path := filepath.Join(t.TempDir(), "2026-01-22_00-59-57.mkv")
+	if err := os.WriteFile(path, []byte{0x00, 0x01}, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	info, err := mediaExtractor{}.ExtractInfo(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !hasSample(info, "media-timestamp", "video 2026 01 22 00 59 57") {
+		t.Fatalf("missing timestamp sample: %+v", info.TextSamples)
 	}
 }
 

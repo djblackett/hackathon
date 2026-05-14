@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -56,6 +57,13 @@ func (imageExtractor) ExtractInfo(path string) (ExtractedFileInfo, error) {
 		Text:   content,
 		Score:  0.45,
 	}}, info.TextSamples...)
+	if name := meaningfulImageBasename(path); name != "" {
+		info.TextSamples = append(info.TextSamples, TextSample{
+			Source: "image-filename",
+			Text:   name,
+			Score:  0.75,
+		})
+	}
 
 	if meta, warning := exiftoolMetadata(path); warning != "" {
 		info.Warnings = append(info.Warnings, warning)
@@ -109,6 +117,26 @@ func imageExtension(format, fallback string) string {
 	default:
 		return strings.TrimPrefix(strings.ToLower(fallback), ".")
 	}
+}
+
+func meaningfulImageBasename(path string) string {
+	base := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
+	base = strings.TrimSpace(base)
+	if base == "" {
+		return ""
+	}
+
+	lower := strings.ToLower(base)
+	if regexp.MustCompile(`^[a-f0-9_-]{8,}$`).MatchString(lower) {
+		return ""
+	}
+	if regexp.MustCompile(`^(img|dsc|pxl|photo|image|screenshot)[-_ ]?\d+([_-]\d+)*$`).MatchString(lower) {
+		return ""
+	}
+	if looksRandomMediaName(lower) {
+		return ""
+	}
+	return strings.NewReplacer("_", " ", "-", " ").Replace(base)
 }
 
 func init() { Register(imageExtractor{}) }

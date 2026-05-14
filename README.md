@@ -165,6 +165,7 @@ go run ./cmd/client/main.go --input ./files/input --dry-run
 | `--min-confidence-to-copy` | Minimum confidence required before copying files; `0` disables copy skipping | `0` |
 | `--report` | Write a JSON report of processed files | none |
 | `--apply-report` | Copy files using destinations from a previous JSON report | none |
+| `--list-pending` | Print pending review entries from a JSON report | none |
 | `--include-skipped` | When applying a report, also copy skipped entries marked `review_status=accepted` | `false` |
 | `--review-report` | Write a Markdown review file for skipped or reviewed report entries | none |
 
@@ -200,6 +201,9 @@ go run ./cmd/client/main.go --input ./files/input --dry-run
 
 # Generate a Markdown review file for skipped entries
 ./ai-renamer --input ./recovered --strategy metadata-only --min-confidence-to-copy 0.75 --report report.json --review-report review.md
+
+# Print pending review entries from a report
+./ai-renamer --list-pending report.json
 
 # After editing report.json and setting selected skipped entries to "review_status": "accepted"
 ./ai-renamer --apply-report report.json --include-skipped

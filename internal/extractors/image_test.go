@@ -13,7 +13,7 @@ import (
 func TestImageExtractorUsesPropertiesWithoutExiftool(t *testing.T) {
 	t.Setenv("PATH", "")
 
-	path := filepath.Join(t.TempDir(), "photo.png")
+	path := filepath.Join(t.TempDir(), "cliffs.png")
 	out, err := os.Create(path)
 	if err != nil {
 		t.Fatal(err)
@@ -38,8 +38,17 @@ func TestImageExtractorUsesPropertiesWithoutExiftool(t *testing.T) {
 	if !hasSample(info, "image-properties", "png image 2x3") {
 		t.Fatalf("missing image properties sample: %+v", info.TextSamples)
 	}
+	if !hasSample(info, "image-filename", "cliffs") {
+		t.Fatalf("missing image filename sample: %+v", info.TextSamples)
+	}
 	if len(info.Warnings) == 0 {
 		t.Fatal("expected exiftool warning when PATH is empty")
+	}
+}
+
+func TestMeaningfulImageBasenameRejectsGenericCameraName(t *testing.T) {
+	if got := meaningfulImageBasename("IMG_0001.png"); got != "" {
+		t.Fatalf("basename = %q, want empty", got)
 	}
 }
 

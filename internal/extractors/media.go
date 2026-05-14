@@ -67,6 +67,12 @@ func (mediaExtractor) ExtractInfo(path string) (ExtractedFileInfo, error) {
 			Text:   name,
 			Score:  mediaFilenameScore(name),
 		})
+	} else if timestamp := mediaTimestampBasename(path, info.SuggestedExtension); timestamp != "" {
+		info.TextSamples = append(info.TextSamples, TextSample{
+			Source: "media-timestamp",
+			Text:   timestamp,
+			Score:  0.74,
+		})
 	}
 
 	if len(info.TextSamples) == 0 {
@@ -173,6 +179,17 @@ func meaningfulMediaBasename(path string) string {
 	}
 	base = strings.NewReplacer("_", " ", "-", " ").Replace(base)
 	return base
+}
+
+func mediaTimestampBasename(path, ext string) string {
+	base := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
+	base = strings.TrimSpace(base)
+	lower := strings.ToLower(base)
+	if !regexp.MustCompile(`^\d{4}[-_]\d{2}[-_]\d{2}([_ -]\d{2}[-_]\d{2}[-_]\d{2})?$`).MatchString(lower) {
+		return ""
+	}
+	normalized := strings.NewReplacer("_", " ", "-", " ").Replace(lower)
+	return mediaKind(ext) + " " + normalized
 }
 
 func mediaFilenameScore(name string) float64 {

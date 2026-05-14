@@ -62,6 +62,10 @@ func sourceWeight(source string) float64 {
 		return 0.9
 	case "media-filename":
 		return 0.7
+	case "image-filename":
+		return 0.75
+	case "media-timestamp":
+		return 0.74
 	case "media-date":
 		return 0.56
 	case "media-properties":
@@ -104,6 +108,8 @@ func sourceWeight(source string) float64 {
 		return 0.68
 	case "text-summary":
 		return 0.72
+	case "short-text-note":
+		return 0.58
 	case "first-meaningful-line":
 		return 0.58
 	case "image-properties":
@@ -138,7 +144,7 @@ func evidencePenalty(source, text string) float64 {
 	if containsBoilerplate(lower) {
 		penalty += 0.5
 	}
-	if looksRandom(text) {
+	if source != "media-timestamp" && looksRandom(text) {
 		penalty += 0.55
 	}
 	if len(text) > 1200 {

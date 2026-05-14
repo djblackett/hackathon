@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -372,6 +373,45 @@ func TestApplyReportCanWriteReviewReport(t *testing.T) {
 	}
 	if _, err := os.Stat(reviewPath); err != nil {
 		t.Fatalf("expected review report: %v", err)
+	}
+}
+
+func TestListPendingReport(t *testing.T) {
+	reportPath := filepath.Join(t.TempDir(), "report.json")
+	if err := report.Write(reportPath, []report.Entry{
+		{
+			SourcePath:      "input/accepted.txt",
+			DestinationPath: "output/accepted.txt",
+			Skipped:         true,
+			ReviewStatus:    "accepted",
+		},
+		{
+			SourcePath:      "input/pending.txt",
+			DestinationPath: "output/pending.txt",
+			Confidence:      0.31,
+			Evidence:        []string{"content"},
+			Warnings:        []string{"low signal"},
+			Skipped:         true,
+			SkipReason:      "confidence 0.31 below copy threshold 0.75",
+			ReviewStatus:    "pending",
+		},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	var out bytes.Buffer
+	if err := listPendingReport(reportPath, &out); err != nil {
+		t.Fatal(err)
+	}
+
+	got := out.String()
+	for _, want := range []string{"Pending review: 1", "input/pending.txt", "output/pending.txt", "confidence: 0.31", "evidence: content", "warnings: low signal"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("pending output missing %q:\n%s", want, got)
+		}
+	}
+	if strings.Contains(got, "accepted.txt") {
+		t.Fatalf("accepted entry should not be listed:\n%s", got)
 	}
 }
 

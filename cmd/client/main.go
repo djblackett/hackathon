@@ -3,10 +3,12 @@ package main
 import (
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 
 	"github.com/joho/godotenv"
@@ -106,6 +108,10 @@ func runApp(args []string) error {
 				Name:  "apply-report",
 				Usage: "copy files using destinations from a previously generated JSON report",
 			},
+			&cli.StringFlag{
+				Name:  "list-pending",
+				Usage: "print pending review entries from a JSON report",
+			},
 			&cli.BoolFlag{
 				Name:  "include-skipped",
 				Usage: "when applying a report, also copy skipped entries marked review_status=accepted",
@@ -136,9 +142,13 @@ func runApp(args []string) error {
 			minConfidenceToCopy := c.Float64("min-confidence-to-copy")
 			reportPath := c.String("report")
 			applyReportPath := c.String("apply-report")
+			listPendingPath := c.String("list-pending")
 			includeSkipped := c.Bool("include-skipped")
 			reviewReportPath := c.String("review-report")
 
+			if listPendingPath != "" {
+				return listPendingReport(listPendingPath, os.Stdout)
+			}
 			if applyReportPath != "" {
 				return applyReport(applyReportPath, dry, includeSkipped, reviewReportPath)
 			}
@@ -405,4 +415,43 @@ func writeReviewFromEntries(path string, entries []report.Entry) error {
 		Summary: report.BuildSummary(entries),
 		Entries: entries,
 	})
+}
+
+func listPendingReport(path string, out io.Writer) error {
+	planned, err := report.Read(path)
+	if err != nil {
+		return err
+	}
+
+	pending := pendingEntries(planned.Entries)
+	fmt.Fprintf(out, "Pending review: %d\n", len(pending))
+	for _, entry := range pending {
+		fmt.Fprintf(out, "\n%s\n", entry.SourcePath)
+		fmt.Fprintf(out, "  destination: %s\n", entry.DestinationPath)
+		fmt.Fprintf(out, "  confidence: %.2f\n", entry.Confidence)
+		if len(entry.Evidence) > 0 {
+			fmt.Fprintf(out, "  evidence: %s\n", strings.Join(entry.Evidence, ", "))
+		}
+		if len(entry.Warnings) > 0 {
+			fmt.Fprintf(out, "  warnings: %s\n", strings.Join(entry.Warnings, "; "))
+		}
+		if entry.SkipReason != "" {
+			fmt.Fprintf(out, "  reason: %s\n", entry.SkipReason)
+		}
+	}
+	return nil
+}
+
+func pendingEntries(entries []report.Entry) []report.Entry {
+	pending := []report.Entry{}
+	for _, entry := range entries {
+		status := report.NormalizeReviewStatus(entry.ReviewStatus)
+		if entry.Skipped && status == "pending" {
+			pending = append(pending, entry)
+		}
+	}
+	sort.Slice(pending, func(i, j int) bool {
+		return pending[i].SourcePath < pending[j].SourcePath
+	})
+	return pending
 }

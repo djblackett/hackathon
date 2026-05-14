@@ -319,6 +319,63 @@ func TestGenerateFilenameUsesImageExifBeforeProperties(t *testing.T) {
 	}
 }
 
+func TestGenerateFilenameUsesImageFilename(t *testing.T) {
+	info := extractors.ExtractedFileInfo{
+		DetectedType:       "image",
+		SuggestedExtension: "png",
+		TextSamples: []extractors.TextSample{
+			{Source: "image-properties", Text: "png image 1024x768", Score: 0.45},
+			{Source: "image-filename", Text: "cliffs", Score: 0.75},
+		},
+	}
+
+	got := GenerateFilename(info)
+
+	if got.Filename != "cliffs" {
+		t.Fatalf("filename = %q, want cliffs", got.Filename)
+	}
+	if got.Confidence < 0.75 {
+		t.Fatalf("confidence = %.2f, want copy-threshold friendly confidence", got.Confidence)
+	}
+}
+
+func TestGenerateFilenameUsesMediaTimestamp(t *testing.T) {
+	info := extractors.ExtractedFileInfo{
+		DetectedType:       "media",
+		SuggestedExtension: "mkv",
+		TextSamples: []extractors.TextSample{
+			{Source: "media-timestamp", Text: "video 2026 01 22 00 59 57", Score: 0.74},
+		},
+	}
+
+	got := GenerateFilename(info)
+
+	if got.Filename != "video-2026-01-22-00-59-57" {
+		t.Fatalf("filename = %q, want timestamp name", got.Filename)
+	}
+	if got.Confidence < 0.75 {
+		t.Fatalf("confidence = %.2f, want copy-threshold friendly confidence", got.Confidence)
+	}
+}
+
+func TestGenerateFilenameUsesShortTextNoteAtMediumConfidence(t *testing.T) {
+	info := extractors.ExtractedFileInfo{
+		DetectedType: "text",
+		TextSamples: []extractors.TextSample{
+			{Source: "short-text-note", Text: "hello there general kenobi roger roger", Score: 0.58},
+		},
+	}
+
+	got := GenerateFilename(info)
+
+	if got.Filename != "hello-there-general-kenobi-roger" {
+		t.Fatalf("filename = %q", got.Filename)
+	}
+	if got.Confidence >= 0.75 {
+		t.Fatalf("confidence = %.2f, want below automatic copy threshold", got.Confidence)
+	}
+}
+
 func TestGenerateFilenameUsesMediaKindFallbacks(t *testing.T) {
 	cases := []struct {
 		ext  string

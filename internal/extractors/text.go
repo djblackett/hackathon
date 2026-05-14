@@ -60,6 +60,12 @@ func (textExtractor) ExtractInfo(path string) (ExtractedFileInfo, error) {
 			Text:   summary,
 			Score:  0.72,
 		})
+	} else if note := shortTextNote(content); note != "" {
+		info.TextSamples = append(info.TextSamples, TextSample{
+			Source: "short-text-note",
+			Text:   note,
+			Score:  0.58,
+		})
 	}
 
 	return info, nil
@@ -108,6 +114,18 @@ func cleanSummaryLine(line string) string {
 }
 
 var wordTokenPattern = regexp.MustCompile(`[A-Za-z0-9]+`)
+
+func shortTextNote(content string) string {
+	text := strings.Join(strings.Fields(content), " ")
+	if text == "" || len(text) > 160 || looksRandomMediaName(text) {
+		return ""
+	}
+	words := wordTokenPattern.FindAllString(text, -1)
+	if len(words) < 3 {
+		return ""
+	}
+	return text
+}
 
 func isLowSignalTextLine(line string) bool {
 	trimmed := strings.TrimSpace(line)
