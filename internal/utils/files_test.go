@@ -36,3 +36,23 @@ func TestUniquePathSkipsExistingFile(t *testing.T) {
 		t.Fatalf("path = %q, want %q", got, want)
 	}
 }
+
+func TestUniquePlannedPathIgnoresExistingFile(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "customer-list.csv")
+	if err := os.WriteFile(path, []byte("existing"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	reserved := map[string]struct{}{}
+	first := UniquePlannedPath(path, reserved)
+	second := UniquePlannedPath(path, reserved)
+
+	if first != path {
+		t.Fatalf("first path = %q, want %q", first, path)
+	}
+	want := filepath.Join(dir, "customer-list-2.csv")
+	if second != want {
+		t.Fatalf("second path = %q, want %q", second, want)
+	}
+}

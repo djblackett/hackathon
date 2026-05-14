@@ -68,6 +68,8 @@ func sourceWeight(source string) float64 {
 		return 0.35
 	case "office-subject":
 		return 0.88
+	case "office-heading":
+		return 0.9
 	case "office-slide-title":
 		return 0.88
 	case "office-headers":
@@ -96,8 +98,12 @@ func sourceWeight(source string) float64 {
 		return 0.42
 	case "pdf-first-text":
 		return 0.72
+	case "office-first-paragraph":
+		return 0.74
 	case "office-text":
 		return 0.68
+	case "text-summary":
+		return 0.72
 	case "first-meaningful-line":
 		return 0.58
 	case "image-properties":

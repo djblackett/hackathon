@@ -63,6 +63,12 @@ func TestOfficeExtractorUsesRecoveredDocText(t *testing.T) {
 	if !hasSamplePrefix(info, "office-text", "The Monumental Construction of the Panama Canal") {
 		t.Fatalf("missing recovered doc heading sample: %+v", info.TextSamples)
 	}
+	if !hasSample(info, "office-heading", "The Monumental Construction of the Panama Canal") {
+		t.Fatalf("missing recovered doc heading sample: %+v", info.TextSamples)
+	}
+	if !hasSamplePrefix(info, "office-first-paragraph", "The Panama Canal, completed in 1914") {
+		t.Fatalf("missing recovered doc first paragraph sample: %+v", info.TextSamples)
+	}
 }
 
 func writeZip(t *testing.T, path string, files map[string]string) {

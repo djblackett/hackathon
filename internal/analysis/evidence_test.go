@@ -200,6 +200,28 @@ func TestGenerateFilenameRejectsRandomText(t *testing.T) {
 	}
 }
 
+func TestGenerateFilenamePrefersTextSummaryOverGreeting(t *testing.T) {
+	info := extractors.ExtractedFileInfo{
+		DetectedType: "text",
+		TextSamples: []extractors.TextSample{
+			{Source: "first-meaningful-line", Text: "Hi Jenna,", Score: 0.55},
+			{Source: "text-summary", Text: "Please find attached the April 2025 invoice for the Woodbridge account.", Score: 0.72},
+		},
+	}
+
+	got := GenerateFilename(info)
+
+	if got.Filename != "april-2025-invoice-woodbridge-account" {
+		t.Fatalf("filename = %q", got.Filename)
+	}
+	if got.Confidence < 0.75 {
+		t.Fatalf("confidence = %.2f, want copy-threshold friendly confidence", got.Confidence)
+	}
+	if got.Evidence[0] != "text-summary" {
+		t.Fatalf("evidence = %+v, want text-summary first", got.Evidence)
+	}
+}
+
 func TestGenerateFilenameAllowsMeaningfulMediaBasename(t *testing.T) {
 	info := extractors.ExtractedFileInfo{
 		DetectedType:       "media",

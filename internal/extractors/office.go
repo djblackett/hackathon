@@ -73,6 +73,10 @@ func (officeExtractor) ExtractInfo(path string) (ExtractedFileInfo, error) {
 	}
 
 	switch subtype {
+	case "docx":
+		for _, sample := range docxParagraphSamples(zr.File) {
+			info.TextSamples = append(info.TextSamples, sample)
+		}
 	case "xlsx":
 		for _, sheet := range xlsxSheetNames(zr.File) {
 			info.TextSamples = append(info.TextSamples, TextSample{
@@ -176,6 +180,124 @@ func officeText(files []*zip.File, subtype string) string {
 		}
 	}
 	return strings.Join(parts, " ")
+}
+
+func docxParagraphSamples(files []*zip.File) []TextSample {
+	paragraphs := docxParagraphs(readZipFile(files, "word/document.xml"))
+	var samples []TextSample
+	for _, paragraph := range paragraphs {
+		if paragraph.text == "" {
+			continue
+		}
+		if paragraph.heading {
+			samples = append(samples, TextSample{
+				Source: "office-heading",
+				Text:   paragraph.text,
+				Score:  0.9,
+			})
+			break
+		}
+	}
+	for _, paragraph := range paragraphs {
+		if paragraph.text == "" || paragraph.heading {
+			continue
+		}
+		samples = append(samples, TextSample{
+			Source: "office-first-paragraph",
+			Text:   firstOfficeSentence(paragraph.text),
+			Score:  0.74,
+		})
+		break
+	}
+	return samples
+}
+
+type docxParagraph struct {
+	text    string
+	heading bool
+}
+
+func docxParagraphs(data string) []docxParagraph {
+	if data == "" {
+		return nil
+	}
+
+	decoder := xml.NewDecoder(strings.NewReader(data))
+	var (
+		inParagraph bool
+		inText      bool
+		textParts   []string
+		heading     bool
+		paragraphs  []docxParagraph
+	)
+	for {
+		token, err := decoder.Token()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return paragraphs
+		}
+		switch t := token.(type) {
+		case xml.StartElement:
+			switch strings.ToLower(t.Name.Local) {
+			case "p":
+				inParagraph = true
+				heading = false
+				textParts = nil
+			case "pstyle":
+				if inParagraph && hasHeadingStyle(t) {
+					heading = true
+				}
+			case "t":
+				if inParagraph {
+					inText = true
+				}
+			}
+		case xml.EndElement:
+			switch strings.ToLower(t.Name.Local) {
+			case "p":
+				text := strings.Join(strings.Fields(strings.Join(textParts, " ")), " ")
+				if text != "" {
+					paragraphs = append(paragraphs, docxParagraph{text: text, heading: heading})
+				}
+				inParagraph = false
+				inText = false
+				textParts = nil
+				heading = false
+			case "t":
+				inText = false
+			}
+		case xml.CharData:
+			if inParagraph && inText {
+				value := strings.TrimSpace(string(t))
+				if value != "" {
+					textParts = append(textParts, value)
+				}
+			}
+		}
+	}
+	return paragraphs
+}
+
+func hasHeadingStyle(el xml.StartElement) bool {
+	for _, attr := range el.Attr {
+		if strings.ToLower(attr.Name.Local) != "val" {
+			continue
+		}
+		return strings.HasPrefix(strings.ToLower(attr.Value), "heading")
+	}
+	return false
+}
+
+func firstOfficeSentence(text string) string {
+	for i, r := range text {
+		switch r {
+		case '.', '!', '?':
+			return strings.TrimSpace(text[:i])
+		}
+	}
+	return text
 }
 
 func xlsxSheetNames(files []*zip.File) []string {

@@ -24,9 +24,11 @@ var wordPattern = regexp.MustCompile(`[a-zA-Z0-9]+`)
 
 var stopWords = map[string]struct{}{
 	"a": {}, "an": {}, "and": {}, "are": {}, "as": {}, "at": {}, "be": {}, "by": {},
-	"audio": {},
-	"for":   {}, "from": {}, "in": {}, "is": {}, "it": {}, "of": {}, "on": {}, "or": {},
-	"the": {}, "this": {}, "to": {}, "video": {}, "with": {},
+	"attached": {}, "audio": {}, "been": {}, "check": {}, "earlier": {}, "find": {},
+	"for": {}, "from": {}, "has": {}, "heads": {}, "in": {}, "include": {}, "includes": {},
+	"is": {}, "it": {}, "just": {}, "of": {}, "on": {}, "or": {}, "please": {}, "reason": {},
+	"that": {}, "the": {}, "this": {}, "to": {}, "today": {}, "up": {},
+	"video": {}, "wanted": {}, "was": {}, "with": {},
 }
 
 var genericWords = map[string]struct{}{

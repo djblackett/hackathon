@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"sync"
 
 	"github.com/joho/godotenv"
@@ -236,7 +237,11 @@ func runApp(args []string) error {
 				if renameMode {
 					planned := filepath.Join(filepath.Dir(path), sanitized+ext)
 					outputMu.Lock()
-					destPath = utils.UniquePath(planned, reservedPaths)
+					if dry {
+						destPath = utils.UniquePlannedPath(planned, reservedPaths)
+					} else {
+						destPath = utils.UniquePath(planned, reservedPaths)
+					}
 					outputMu.Unlock()
 				} else {
 					planned, err := utils.DestinationPath(input, path, output, sanitized, ext, flatten)
@@ -245,14 +250,18 @@ func runApp(args []string) error {
 						return
 					}
 					outputMu.Lock()
-					destPath = utils.UniquePath(planned, reservedPaths)
+					if dry {
+						destPath = utils.UniquePlannedPath(planned, reservedPaths)
+					} else {
+						destPath = utils.UniquePath(planned, reservedPaths)
+					}
 					outputMu.Unlock()
 				}
 
 				skipped := false
 				skipReason := ""
 				reviewStatus := ""
-				if !dry && !renameMode && minConfidenceToCopy > 0 && confidence < minConfidenceToCopy {
+				if !renameMode && minConfidenceToCopy > 0 && confidence < minConfidenceToCopy {
 					skipped = true
 					skipReason = fmt.Sprintf("confidence %.2f below copy threshold %.2f", confidence, minConfidenceToCopy)
 					reviewStatus = "pending"
@@ -305,6 +314,9 @@ func runApp(args []string) error {
 			// Wait for all processing to complete, then close channel so range terminates.
 			wg.Wait()
 			close(errChan)
+			sort.Slice(reportEntries, func(i, j int) bool {
+				return reportEntries[i].SourcePath < reportEntries[j].SourcePath
+			})
 
 			if err := report.Write(reportPath, reportEntries); err != nil {
 				return err

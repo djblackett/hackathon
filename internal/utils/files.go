@@ -97,6 +97,24 @@ func UniquePath(path string, reserved map[string]struct{}) string {
 	}
 }
 
+func UniquePlannedPath(path string, reserved map[string]struct{}) string {
+	if _, ok := reserved[path]; !ok {
+		reserved[path] = struct{}{}
+		return path
+	}
+
+	ext := filepath.Ext(path)
+	base := strings.TrimSuffix(path, ext)
+	for i := 2; ; i++ {
+		candidate := base + "-" + strconv.Itoa(i) + ext
+		if _, ok := reserved[candidate]; ok {
+			continue
+		}
+		reserved[candidate] = struct{}{}
+		return candidate
+	}
+}
+
 func fileExists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil

@@ -68,7 +68,7 @@ func TestClientDryRunReportRecoveredCorpus(t *testing.T) {
 	assertSuggestedName(t, bySource, "unknown.dat", "customer-first-name-last-company-city-country-phone.csv")
 	assertSuggestedName(t, bySource, "markdown-note", "incident-response-runbook.md")
 	assertSuggestedName(t, bySource, "message", "customer-onboarding-checklist.eml")
-	assertSuggestedName(t, bySource, "recovered-doc", "monumental-construction-panama-canal-completed-1914-stands-o.docx")
+	assertSuggestedName(t, bySource, "recovered-doc", "monumental-construction-panama-canal.docx")
 	assertSuggestedName(t, bySource, "recovered-html", "basics-photosynthesis.html")
 	assertSuggestedName(t, bySource, "recovered-musicxml", "you-my-sunshine.musicxml")
 	assertSuggestedName(t, bySource, "recovered-xml.bin", "quarterly-safety-inspection-log.xml")
@@ -87,7 +87,7 @@ func TestClientDryRunReportRecoveredCorpus(t *testing.T) {
 		"markdown-note":      {Dest: "incident-response-runbook.md", Suggested: "incident-response-runbook.md", Method: "metadata", Evidence: "markdown-heading"},
 		"message":            {Dest: "customer-onboarding-checklist.eml", Suggested: "customer-onboarding-checklist.eml", Method: "metadata", Evidence: "email-subject"},
 		"random.txt":         {Dest: "unidentified-content.txt", Suggested: "unidentified-content.txt", Method: "metadata"},
-		"recovered-doc":      {Dest: "monumental-construction-panama-canal-completed-1914-stands-o.docx", Suggested: "monumental-construction-panama-canal-completed-1914-stands-o.docx", Method: "metadata", Evidence: "office-text"},
+		"recovered-doc":      {Dest: "monumental-construction-panama-canal.docx", Suggested: "monumental-construction-panama-canal.docx", Method: "metadata", Evidence: "office-heading"},
 		"recovered-html":     {Dest: "basics-photosynthesis.html", Suggested: "basics-photosynthesis.html", Method: "metadata", Evidence: "html-title"},
 		"recovered-musicxml": {Dest: "you-my-sunshine.musicxml", Suggested: "you-my-sunshine.musicxml", Method: "metadata", Evidence: "musicxml-work-title"},
 		"recovered-xml.bin":  {Dest: "quarterly-safety-inspection-log.xml", Suggested: "quarterly-safety-inspection-log.xml", Method: "metadata", Evidence: "xml-title"},

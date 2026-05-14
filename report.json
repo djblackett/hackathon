@@ -1,12 +1,15 @@
 {
   "summary": {
     "total_files": 17,
-    "planned_count": 6,
-    "copied_count": 6,
-    "skipped_count": 11,
+    "planned_count": 13,
+    "copied_count": 0,
+    "skipped_count": 4,
     "low_confidence_count": 3,
     "ai_fallback_count": 0,
-    "warnings_count": 1
+    "warnings_count": 1,
+    "pending_review_count": 4,
+    "accepted_count": 0,
+    "rejected_count": 0
   },
   "entries": [
     {
@@ -15,9 +18,10 @@
       "suggested_name": "unidentified-video.mkv",
       "method": "metadata",
       "confidence": 0.1,
-      "dry_run": false,
+      "dry_run": true,
       "skipped": true,
-      "skip_reason": "confidence 0.10 below copy threshold 0.75"
+      "skip_reason": "confidence 0.10 below copy threshold 0.75",
+      "review_status": "pending"
     },
     {
       "source_path": "files/input/BF^#(bgfysj.html",
@@ -28,7 +32,7 @@
       "evidence": [
         "html-title"
       ],
-      "dry_run": false
+      "dry_run": true
     },
     {
       "source_path": "files/input/Retro Metro mix 2 (Dec 28) - 01 Start.wav",
@@ -39,20 +43,18 @@
       "evidence": [
         "media-filename"
       ],
-      "dry_run": false
+      "dry_run": true
     },
     {
       "source_path": "files/input/alice.mp4",
       "destination_path": "files/output/alice.mp4",
       "suggested_name": "alice.mp4",
       "method": "metadata",
-      "confidence": 0.72,
+      "confidence": 0.75,
       "evidence": [
         "media-filename"
       ],
-      "dry_run": false,
-      "skipped": true,
-      "skip_reason": "confidence 0.72 below copy threshold 0.75"
+      "dry_run": true
     },
     {
       "source_path": "files/input/cliffs.png",
@@ -63,33 +65,10 @@
       "warnings": [
         "exiftool not available; image EXIF metadata skipped"
       ],
-      "dry_run": false,
+      "dry_run": true,
       "skipped": true,
-      "skip_reason": "confidence 0.10 below copy threshold 0.75"
-    },
-    {
-      "source_path": "files/input/json001.bin",
-      "destination_path": "files/output/quiz-sport-q1-question-which-one-correct-team.json",
-      "suggested_name": "quiz-sport-q1-question-which-one-correct-team.json",
-      "method": "metadata",
-      "confidence": 0.45999999999999996,
-      "evidence": [
-        "content"
-      ],
-      "dry_run": false,
-      "skipped": true,
-      "skip_reason": "confidence 0.46 below copy threshold 0.75"
-    },
-    {
-      "source_path": "files/input/mrkdn",
-      "destination_path": "files/output/super-important-title.md",
-      "suggested_name": "super-important-title.md",
-      "method": "metadata",
-      "confidence": 0.95,
-      "evidence": [
-        "markdown-heading"
-      ],
-      "dry_run": false
+      "skip_reason": "confidence 0.10 below copy threshold 0.75",
+      "review_status": "pending"
     },
     {
       "source_path": "files/input/customers-100.csv",
@@ -100,7 +79,29 @@
       "evidence": [
         "csv-headers"
       ],
-      "dry_run": false
+      "dry_run": true
+    },
+    {
+      "source_path": "files/input/json001.bin",
+      "destination_path": "files/output/quiz-sport-q1-question-which-one-correct-team.json",
+      "suggested_name": "quiz-sport-q1-question-which-one-correct-team.json",
+      "method": "metadata",
+      "confidence": 0.95,
+      "evidence": [
+        "json-structured"
+      ],
+      "dry_run": true
+    },
+    {
+      "source_path": "files/input/mrkdn",
+      "destination_path": "files/output/super-important-title.md",
+      "suggested_name": "super-important-title.md",
+      "method": "metadata",
+      "confidence": 0.95,
+      "evidence": [
+        "markdown-heading"
+      ],
+      "dry_run": true
     },
     {
       "source_path": "files/input/nfuweiqobfioq",
@@ -111,7 +112,7 @@
       "evidence": [
         "musicxml-work-title"
       ],
-      "dry_run": false
+      "dry_run": true
     },
     {
       "source_path": "files/input/pdf001.pdf",
@@ -122,7 +123,29 @@
       "evidence": [
         "pdf-first-text"
       ],
-      "dry_run": false
+      "dry_run": true
+    },
+    {
+      "source_path": "files/input/sdfjgbfh4644623.docx",
+      "destination_path": "files/output/monumental-construction-panama-canal.docx",
+      "suggested_name": "monumental-construction-panama-canal.docx",
+      "method": "metadata",
+      "confidence": 0.95,
+      "evidence": [
+        "office-heading"
+      ],
+      "dry_run": true
+    },
+    {
+      "source_path": "files/input/text-files/f823939887.txt",
+      "destination_path": "files/output/text-files/unidentified-content.txt",
+      "suggested_name": "unidentified-content.txt",
+      "method": "metadata",
+      "confidence": 0.1,
+      "dry_run": true,
+      "skipped": true,
+      "skip_reason": "confidence 0.10 below copy threshold 0.75",
+      "review_status": "pending"
     },
     {
       "source_path": "files/input/text-files/text.txt",
@@ -133,84 +156,54 @@
       "evidence": [
         "first-meaningful-line"
       ],
-      "dry_run": false,
+      "dry_run": true,
       "skipped": true,
-      "skip_reason": "confidence 0.61 below copy threshold 0.75"
-    },
-    {
-      "source_path": "files/input/text-files/f823939887.txt",
-      "destination_path": "files/output/text-files/unidentified-content.txt",
-      "suggested_name": "unidentified-content.txt",
-      "method": "metadata",
-      "confidence": 0.1,
-      "dry_run": false,
-      "skipped": true,
-      "skip_reason": "confidence 0.10 below copy threshold 0.75"
-    },
-    {
-      "source_path": "files/input/text-files/text002.txt",
-      "destination_path": "files/output/text-files/hi-jenna.txt",
-      "suggested_name": "hi-jenna.txt",
-      "method": "metadata",
-      "confidence": 0.61,
-      "evidence": [
-        "first-meaningful-line"
-      ],
-      "dry_run": false,
-      "skipped": true,
-      "skip_reason": "confidence 0.61 below copy threshold 0.75"
+      "skip_reason": "confidence 0.61 below copy threshold 0.75",
+      "review_status": "pending"
     },
     {
       "source_path": "files/input/text-files/text001.txt",
-      "destination_path": "files/output/text-files/hey-team.txt",
-      "suggested_name": "hey-team.txt",
+      "destination_path": "files/output/text-files/thursday-sync-alex-moved-friday-10-30-am.txt",
+      "suggested_name": "thursday-sync-alex-moved-friday-10-30-am.txt",
       "method": "metadata",
-      "confidence": 0.61,
+      "confidence": 0.8300000000000001,
       "evidence": [
-        "first-meaningful-line"
+        "text-summary"
       ],
-      "dry_run": false,
-      "skipped": true,
-      "skip_reason": "confidence 0.61 below copy threshold 0.75"
+      "dry_run": true
     },
     {
-      "source_path": "files/input/text-files/text004.txt",
-      "destination_path": "files/output/text-files/hey-just-wanted-check-was-thinking-about-you.txt",
-      "suggested_name": "hey-just-wanted-check-was-thinking-about-you.txt",
+      "source_path": "files/input/text-files/text002.txt",
+      "destination_path": "files/output/text-files/april-2025-invoice-woodbridge-account.txt",
+      "suggested_name": "april-2025-invoice-woodbridge-account.txt",
       "method": "metadata",
-      "confidence": 0.45999999999999996,
+      "confidence": 0.8300000000000001,
       "evidence": [
-        "content"
+        "text-summary"
       ],
-      "dry_run": false,
-      "skipped": true,
-      "skip_reason": "confidence 0.46 below copy threshold 0.75"
-    },
-    {
-      "source_path": "files/input/sdfjgbfh4644623.docx",
-      "destination_path": "files/output/monumental-construction-panama-canal-completed-1914-stands-o.docx",
-      "suggested_name": "monumental-construction-panama-canal-completed-1914-stands-o.docx",
-      "method": "metadata",
-      "confidence": 0.6900000000000001,
-      "evidence": [
-        "office-text"
-      ],
-      "dry_run": false,
-      "skipped": true,
-      "skip_reason": "confidence 0.69 below copy threshold 0.75"
+      "dry_run": true
     },
     {
       "source_path": "files/input/text-files/text003.txt",
       "destination_path": "files/output/text-files/let-me-not-marriage-true-minds.txt",
       "suggested_name": "let-me-not-marriage-true-minds.txt",
       "method": "metadata",
-      "confidence": 0.69,
+      "confidence": 0.8300000000000001,
       "evidence": [
-        "first-meaningful-line"
+        "text-summary"
       ],
-      "dry_run": false,
-      "skipped": true,
-      "skip_reason": "confidence 0.69 below copy threshold 0.75"
+      "dry_run": true
+    },
+    {
+      "source_path": "files/input/text-files/text004.txt",
+      "destination_path": "files/output/text-files/thinking-about-you.txt",
+      "suggested_name": "thinking-about-you.txt",
+      "method": "metadata",
+      "confidence": 0.8,
+      "evidence": [
+        "text-summary"
+      ],
+      "dry_run": true
     }
   ]
 }

@@ -3,6 +3,7 @@ package extractors
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -35,11 +36,9 @@ func (textExtractor) ExtractInfo(path string) (ExtractedFileInfo, error) {
 	}
 	info := NewExtractedFileInfo(path, detectedType, content)
 
-	for _, line := range strings.Split(content, "\n") {
+	lines := nonEmptyTextLines(content)
+	for _, line := range lines {
 		line = strings.TrimSpace(line)
-		if line == "" {
-			continue
-		}
 		source := "first-meaningful-line"
 		score := 0.55
 		if strings.HasPrefix(line, "#") {
@@ -55,7 +54,80 @@ func (textExtractor) ExtractInfo(path string) (ExtractedFileInfo, error) {
 		break
 	}
 
+	if summary := firstSubstantiveTextLine(lines); summary != "" {
+		info.TextSamples = append(info.TextSamples, TextSample{
+			Source: "text-summary",
+			Text:   summary,
+			Score:  0.72,
+		})
+	}
+
 	return info, nil
+}
+
+func nonEmptyTextLines(content string) []string {
+	var lines []string
+	for _, line := range strings.Split(content, "\n") {
+		line = strings.TrimSpace(line)
+		if line != "" {
+			lines = append(lines, line)
+		}
+	}
+	return lines
+}
+
+func firstSubstantiveTextLine(lines []string) string {
+	for _, line := range lines {
+		if strings.HasPrefix(line, "#") {
+			continue
+		}
+		if isLowSignalTextLine(line) {
+			continue
+		}
+		return firstSentence(line)
+	}
+	return ""
+}
+
+func firstSentence(line string) string {
+	for i, r := range line {
+		switch r {
+		case '.', '!', '?':
+			return cleanSummaryLine(line[:i])
+		}
+	}
+	return cleanSummaryLine(line)
+}
+
+func cleanSummaryLine(line string) string {
+	replacer := strings.NewReplacer(
+		"for some reason", "",
+		"For some reason", "",
+	)
+	return strings.TrimSpace(replacer.Replace(line))
+}
+
+var wordTokenPattern = regexp.MustCompile(`[A-Za-z0-9]+`)
+
+func isLowSignalTextLine(line string) bool {
+	trimmed := strings.TrimSpace(line)
+	lower := strings.ToLower(strings.Trim(trimmed, " \t,.!?:;-"))
+	words := wordTokenPattern.FindAllString(lower, -1)
+	if len(words) == 0 {
+		return true
+	}
+
+	switch lower {
+	case "thanks", "thank you", "best", "regards", "sincerely":
+		return true
+	}
+	if len(words) <= 3 {
+		switch words[0] {
+		case "hi", "hey", "hello", "dear":
+			return true
+		}
+	}
+	return len(trimmed) < 24 && len(words) < 5
 }
 
 func init() { Register(textExtractor{}) }
