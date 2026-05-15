@@ -115,6 +115,26 @@ go run ./cmd/client/main.go --strategy metadata-only --report report.json
 # Renamed files will appear in files/output/
 ```
 
+### Recovername v0.1 Preview
+
+The newer scan-only workflow is available as `recovername`. It is designed for recovered files where the original names, extensions, or metadata may be unreliable. This command writes a reviewable JSON plan and does not copy, rename, or delete files.
+
+```bash
+go run ./cmd/recovername scan ./testdata/recovered \
+  --out rename-plan.json \
+  --no-timestamp
+```
+
+Optional Tika evidence can be added without making Tika mandatory:
+
+```bash
+go run ./cmd/recovername scan ./recovered \
+  --out rename-plan.json \
+  --tika-url http://127.0.0.1:9998
+```
+
+Use `--require-tika` only when a missing Tika server should fail the whole scan. Otherwise Tika failures are recorded as per-file warnings and the plan is still written.
+
 ### 2. Choose Your Backend
 
 #### Option A: Remote Server

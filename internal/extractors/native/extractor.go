@@ -23,13 +23,15 @@ import (
 
 const textPreviewLimit = 2000
 
-type Extractor struct{}
+type Extractor struct {
+	MaxTextPreview int
+}
 
 func (Extractor) Name() evidence.EvidenceSource { return evidence.SourceNativeMIME }
 
 func (Extractor) Available(ctx context.Context) bool { return true }
 
-func (Extractor) Extract(ctx context.Context, path string) (evidence.PartialEvidence, error) {
+func (e Extractor) Extract(ctx context.Context, path string) (evidence.PartialEvidence, error) {
 	detection := filetype.Detect(path)
 	ev := evidence.FileEvidence{
 		Path:      path,
@@ -78,11 +80,19 @@ func (Extractor) Extract(ctx context.Context, path string) (evidence.PartialEvid
 	}
 
 	if isTextLike(detection.Type) {
-		preview, err := textPreview(path, textPreviewLimit)
+		limit := e.MaxTextPreview
+		if limit <= 0 {
+			limit = textPreviewLimit
+		}
+		signalLimit := textPreviewLimit
+		if limit > signalLimit {
+			signalLimit = limit
+		}
+		preview, err := textPreview(path, signalLimit)
 		if err != nil {
 			ev.Warnings = append(ev.Warnings, "native text preview failed: "+err.Error())
 		} else {
-			ev.TextPreview = preview
+			ev.TextPreview = trimText(preview, limit)
 			if signal := signalForDetection(detection, preview); signal != "" {
 				ev.TextSignals = append(ev.TextSignals, signal)
 			}
@@ -317,6 +327,13 @@ func textPreview(path string, limit int) (string, error) {
 		text = strings.TrimSpace(text[:limit])
 	}
 	return text, nil
+}
+
+func trimText(text string, limit int) string {
+	if limit <= 0 || len(text) <= limit {
+		return text
+	}
+	return strings.TrimSpace(text[:limit])
 }
 
 func signalForDetection(detection filetype.Detection, preview string) string {

@@ -38,7 +38,7 @@ func Scan(ctx context.Context, cfg ScanConfig) (plan.Plan, error) {
 		return plan.Plan{}, err
 	}
 
-	nativeExtractor := native.Extractor{}
+	nativeExtractor := native.Extractor{MaxTextPreview: cfg.MaxTextPreview}
 	var tikaExtractor *tikaextractor.Extractor
 	tikaUnavailableWarning := ""
 	if !cfg.NoTika && (cfg.TikaURL != "" || cfg.TikaClient != nil) {

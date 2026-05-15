@@ -51,6 +51,28 @@ func TestScanWritesDeterministicPlanWithoutTimestamp(t *testing.T) {
 	if strings.Contains(string(a), "generatedAt") {
 		t.Fatalf("plan should omit generatedAt with --no-timestamp:\n%s", a)
 	}
+
+	var parsed struct {
+		Version int    `json:"version"`
+		Root    string `json:"root"`
+		Items   []struct {
+			OldPath       string          `json:"oldPath"`
+			SuggestedPath string          `json:"suggestedPath"`
+			Confidence    string          `json:"confidence"`
+			Score         float64         `json:"score"`
+			Evidence      json.RawMessage `json:"evidence"`
+			Reasons       []string        `json:"reasons"`
+		} `json:"items"`
+	}
+	if err := json.Unmarshal(a, &parsed); err != nil {
+		t.Fatal(err)
+	}
+	if parsed.Version != 1 || parsed.Root != root || len(parsed.Items) != 1 {
+		t.Fatalf("unexpected plan envelope: %+v", parsed)
+	}
+	if parsed.Items[0].OldPath == "" || parsed.Items[0].SuggestedPath == "" || parsed.Items[0].Confidence == "" || len(parsed.Items[0].Reasons) == 0 {
+		t.Fatalf("missing required item fields: %+v", parsed.Items[0])
+	}
 }
 
 func TestScanExtensionFallbacks(t *testing.T) {
@@ -74,6 +96,30 @@ func TestScanExtensionFallbacks(t *testing.T) {
 	}
 	if byBase["png-file"].Evidence.Extension != ".png" {
 		t.Fatalf("png extension = %q", byBase["png-file"].Evidence.Extension)
+	}
+}
+
+func TestScanAppliesMaxTextPreviewToNativeEvidence(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "long.txt"), []byte(strings.Repeat("word ", 100)), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := Scan(context.Background(), ScanConfig{
+		Root:           root,
+		OutPath:        filepath.Join(t.TempDir(), "plan.json"),
+		Hash:           false,
+		MaxTextPreview: 25,
+		NoTimestamp:    true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Items) != 1 {
+		t.Fatalf("items = %d, want 1", len(got.Items))
+	}
+	if len(got.Items[0].Evidence.TextPreview) > 25 {
+		t.Fatalf("text preview length = %d, want <= 25: %q", len(got.Items[0].Evidence.TextPreview), got.Items[0].Evidence.TextPreview)
 	}
 }
 
@@ -108,6 +154,44 @@ func TestScanMissingTikaServerAddsWarning(t *testing.T) {
 	}
 	if len(got.Items[0].Warnings) == 0 || !strings.Contains(got.Items[0].Warnings[0], "tika unavailable") {
 		t.Fatalf("missing tika warning: %+v", got.Items[0].Warnings)
+	}
+}
+
+func TestScanRecordsBadFileWithoutFailingBatch(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "good.txt"), []byte("Quarterly revenue review"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	badPath := filepath.Join(root, "broken-link")
+	if err := os.Symlink(filepath.Join(root, "missing-target"), badPath); err != nil {
+		t.Skipf("symlink not supported in this environment: %v", err)
+	}
+
+	got, err := Scan(context.Background(), ScanConfig{
+		Root:        root,
+		OutPath:     filepath.Join(t.TempDir(), "plan.json"),
+		Hash:        true,
+		NoTimestamp: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Items) != 2 {
+		t.Fatalf("items = %d, want 2", len(got.Items))
+	}
+	byBase := map[string]plan.Item{}
+	for _, item := range got.Items {
+		byBase[filepath.Base(item.OldPath)] = item
+	}
+	bad := byBase["broken-link"]
+	if len(bad.Evidence.Errors) == 0 {
+		t.Fatalf("bad file should include evidence errors: %+v", bad.Evidence)
+	}
+	if len(bad.Warnings) == 0 {
+		t.Fatalf("bad file should include item warnings: %+v", bad)
+	}
+	if _, ok := byBase["good.txt"]; !ok {
+		t.Fatalf("good file missing from plan: %+v", byBase)
 	}
 }
 
