@@ -164,7 +164,7 @@ func strongestDate(ev evidence.FileEvidence) string {
 	sort.Strings(keys)
 	for _, key := range keys {
 		lower := strings.ToLower(key)
-		if !strings.Contains(lower, "date") && !strings.Contains(lower, "created") && !strings.Contains(lower, "modified") {
+		if !strings.Contains(lower, "date") && !strings.Contains(lower, "created") && !strings.Contains(lower, "creation") && !strings.Contains(lower, "modified") {
 			continue
 		}
 		if date := normalizeDateOnly(ev.Metadata[key]); date != "" {

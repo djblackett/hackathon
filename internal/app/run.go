@@ -14,6 +14,7 @@ import (
 
 	"github.com/djblackett/bootdev-hackathon/internal/evidence"
 	"github.com/djblackett/bootdev-hackathon/internal/extractors/exiftool"
+	"github.com/djblackett/bootdev-hackathon/internal/extractors/ffprobe"
 	"github.com/djblackett/bootdev-hackathon/internal/extractors/native"
 	"github.com/djblackett/bootdev-hackathon/internal/extractors/siegfried"
 	"github.com/djblackett/bootdev-hackathon/internal/extractors/tikaextractor"
@@ -35,6 +36,9 @@ func Scan(ctx context.Context, cfg ScanConfig) (plan.Plan, error) {
 	if cfg.ExifToolTimeout <= 0 {
 		cfg.ExifToolTimeout = 15 * time.Second
 	}
+	if cfg.FFProbeTimeout <= 0 {
+		cfg.FFProbeTimeout = 15 * time.Second
+	}
 	if cfg.SiegfriedTimeout <= 0 {
 		cfg.SiegfriedTimeout = 10 * time.Second
 	}
@@ -50,6 +54,8 @@ func Scan(ctx context.Context, cfg ScanConfig) (plan.Plan, error) {
 	nativeExtractor := native.Extractor{MaxTextPreview: cfg.MaxTextPreview}
 	exifToolExtractor := exiftool.Extractor{Timeout: cfg.ExifToolTimeout}
 	exifToolUnavailable := cfg.UseExifTool && !exifToolExtractor.Available(ctx)
+	ffprobeExtractor := ffprobe.Extractor{Timeout: cfg.FFProbeTimeout}
+	ffprobeUnavailable := cfg.UseFFProbe && !ffprobeExtractor.Available(ctx)
 	siegfriedExtractor := siegfried.Extractor{Timeout: cfg.SiegfriedTimeout}
 	siegfriedUnavailableWarning := ""
 	if cfg.UseSiegfried && !siegfriedExtractor.Available(ctx) {
@@ -135,6 +141,21 @@ func Scan(ctx context.Context, cfg ScanConfig) (plan.Plan, error) {
 			}
 		}
 
+		if cfg.UseFFProbe && shouldRunFFProbe(ev) {
+			if ffprobeUnavailable {
+				ev.Warnings = append(ev.Warnings, "ffprobe unavailable; extraction skipped")
+			} else {
+				extractCtx, cancel := context.WithTimeout(ctx, cfg.FFProbeTimeout)
+				partial, err := ffprobeExtractor.Extract(extractCtx, path)
+				cancel()
+				if err != nil {
+					ev.Errors = append(ev.Errors, evidence.ToolError{Source: evidence.SourceFFProbe, Message: err.Error()})
+				} else {
+					ev = evidence.Merge(ev, partial)
+				}
+			}
+		}
+
 		if tikaExtractor != nil {
 			extractCtx, cancel := context.WithTimeout(ctx, cfg.TikaTimeout)
 			partial, err := tikaExtractor.Extract(extractCtx, path)
@@ -161,6 +182,20 @@ func Scan(ctx context.Context, cfg ScanConfig) (plan.Plan, error) {
 		return plan.Plan{}, err
 	}
 	return p, nil
+}
+
+func shouldRunFFProbe(ev evidence.FileEvidence) bool {
+	mime := strings.ToLower(ev.DetectedMIME)
+	ext := strings.ToLower(ev.Extension)
+	if strings.HasPrefix(mime, "audio/") || strings.HasPrefix(mime, "video/") {
+		return true
+	}
+	switch ext {
+	case ".mp3", ".m4a", ".wav", ".flac", ".mp4", ".mov", ".mkv", ".avi":
+		return true
+	default:
+		return false
+	}
 }
 
 func baseEvidence(path string) evidence.FileEvidence {

@@ -81,6 +81,27 @@ func TestGenerateUsesImageTimestampAndCameraEvidence(t *testing.T) {
 	}
 }
 
+func TestGenerateUsesMediaTitleAndCreationDate(t *testing.T) {
+	got := Generate(evidence.FileEvidence{
+		Path:         "recovered/video",
+		DetectedMIME: "video/mp4",
+		Extension:    ".mp4",
+		Metadata: map[string]string{
+			"title":         "Family Video",
+			"creation_time": "2020-10-03T18:12:01.000000Z",
+		},
+		Media:   &evidence.MediaEvidence{DurationSeconds: 12.5, Codec: "h264", Width: 1920, Height: 1080},
+		Sources: []evidence.EvidenceSource{evidence.SourceNativeMIME, evidence.SourceFFProbe},
+	}, 4)
+
+	if got.Filename != "2020-10-03_family-video.mp4" {
+		t.Fatalf("Filename = %q", got.Filename)
+	}
+	if got.Confidence != ConfidenceHigh {
+		t.Fatalf("Confidence = %q, want high", got.Confidence)
+	}
+}
+
 func TestIsGenericTitle(t *testing.T) {
 	for _, value := range []string{"untitled", "Document1", "Microsoft Word - Document", "scan 0001"} {
 		if !IsGenericTitle(value) {

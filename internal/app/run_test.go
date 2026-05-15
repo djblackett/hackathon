@@ -216,6 +216,43 @@ func TestScanMissingExifToolAddsWarningForImage(t *testing.T) {
 	}
 }
 
+func TestScanMissingFFProbeAddsWarningForMedia(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "clip.mp4"), []byte{0x00, 0x01, 0x02, 0x03}, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := Scan(context.Background(), ScanConfig{
+		Root:        root,
+		OutPath:     filepath.Join(t.TempDir(), "plan.json"),
+		UseFFProbe:  true,
+		Hash:        false,
+		NoTimestamp: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Items) != 1 {
+		t.Fatalf("items = %d, want 1", len(got.Items))
+	}
+	foundUnavailable := false
+	foundError := false
+	for _, warning := range got.Items[0].Warnings {
+		if strings.Contains(warning, "ffprobe unavailable") {
+			foundUnavailable = true
+		}
+		if strings.Contains(warning, "ffprobe failed") {
+			foundError = true
+		}
+	}
+	if !ffprobeInstalled() && !foundUnavailable {
+		t.Fatalf("missing ffprobe unavailable warning: %+v", got.Items[0].Warnings)
+	}
+	if ffprobeInstalled() && !foundError && len(got.Items[0].Evidence.Errors) == 0 {
+		t.Fatalf("expected ffprobe failure/error for invalid media fixture: %+v", got.Items[0])
+	}
+}
+
 func TestScanRecordsBadFileWithoutFailingBatch(t *testing.T) {
 	root := t.TempDir()
 	if err := os.WriteFile(filepath.Join(root, "good.txt"), []byte("Quarterly revenue review"), 0644); err != nil {
@@ -342,6 +379,10 @@ func siegfriedInstalled() bool {
 
 func exifToolInstalled() bool {
 	return tools.Available("exiftool")
+}
+
+func ffprobeInstalled() bool {
+	return tools.Available("ffprobe")
 }
 
 func writePNG(t *testing.T, path string) {

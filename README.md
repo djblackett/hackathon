@@ -157,6 +157,17 @@ go run ./cmd/recovername scan ./recovered \
 
 ExifTool only runs for files that native detection identifies as image or media-like. If `exiftool` is not installed, the scan still completes and records warnings for those files.
 
+ffprobe can be enabled for audio/video technical metadata:
+
+```bash
+go run ./cmd/recovername scan ./recovered \
+  --out rename-plan.json \
+  --ffprobe \
+  --ffprobe-timeout 15s
+```
+
+ffprobe only runs for files that native detection identifies as audio/video-like. Tool failures are recorded per file and do not stop the batch.
+
 ### 2. Choose Your Backend
 
 #### Option A: Remote Server
