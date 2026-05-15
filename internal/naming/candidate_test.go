@@ -42,6 +42,24 @@ func TestGenerateUsesExtensionFallback(t *testing.T) {
 	}
 }
 
+func TestGenerateRejectsRandomTextSignal(t *testing.T) {
+	got := Generate(evidence.FileEvidence{
+		Path:         "recovered/random.txt",
+		DetectedMIME: "text/plain",
+		Extension:    ".txt",
+		TextPreview:  "OeYV/jjq0pT9Jn4oiiJG\nUHmmYZszQjxHikWZF8lCoisYzBgiJEuZoRpmcYzMQ8R",
+		TextSignals:  []string{"OeYV/jjq0pT9Jn4oiiJG"},
+		Sources:      []evidence.EvidenceSource{evidence.SourceNativeMIME},
+	}, 12)
+
+	if got.Filename != "unknown-text_000012.txt" {
+		t.Fatalf("Filename = %q, want unknown-text_000012.txt", got.Filename)
+	}
+	if got.Confidence != ConfidenceLow {
+		t.Fatalf("Confidence = %q, want low", got.Confidence)
+	}
+}
+
 func TestIsGenericTitle(t *testing.T) {
 	for _, value := range []string{"untitled", "Document1", "Microsoft Word - Document", "scan 0001"} {
 		if !IsGenericTitle(value) {

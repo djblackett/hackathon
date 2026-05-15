@@ -3,6 +3,8 @@ package native
 import (
 	"bytes"
 	"context"
+	"encoding/csv"
+	"encoding/json"
 	"image"
 	_ "image/gif"
 	_ "image/jpeg"
@@ -10,6 +12,8 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"regexp"
+	"sort"
 	"strings"
 	"unicode/utf8"
 
@@ -79,7 +83,7 @@ func (Extractor) Extract(ctx context.Context, path string) (evidence.PartialEvid
 			ev.Warnings = append(ev.Warnings, "native text preview failed: "+err.Error())
 		} else {
 			ev.TextPreview = preview
-			if signal := firstMeaningfulLine(preview); signal != "" {
+			if signal := signalForDetection(detection, preview); signal != "" {
 				ev.TextSignals = append(ev.TextSignals, signal)
 			}
 		}
@@ -306,11 +310,132 @@ func textPreview(path string, limit int) (string, error) {
 	if !utf8.Valid(data) {
 		return "", nil
 	}
-	text := strings.Join(strings.Fields(string(data)), " ")
+	text := strings.ReplaceAll(string(data), "\r\n", "\n")
+	text = strings.ReplaceAll(text, "\r", "\n")
+	text = strings.TrimSpace(text)
 	if len(text) > limit {
 		text = strings.TrimSpace(text[:limit])
 	}
 	return text, nil
+}
+
+func signalForDetection(detection filetype.Detection, preview string) string {
+	switch detection.Type {
+	case "csv":
+		return csvSignal(preview)
+	case "json":
+		return jsonSignal(preview)
+	case "markdown":
+		return markdownSignal(preview)
+	case "html":
+		return htmlSignal(preview)
+	case "xml":
+		return xmlSignal(preview)
+	case "email":
+		return emailSignal(preview)
+	default:
+		return firstMeaningfulLine(preview)
+	}
+}
+
+func csvSignal(preview string) string {
+	reader := csv.NewReader(strings.NewReader(preview))
+	reader.FieldsPerRecord = -1
+	record, err := reader.Read()
+	if err != nil {
+		return firstMeaningfulLine(preview)
+	}
+	fields := make([]string, 0, len(record))
+	for _, field := range record {
+		field = strings.TrimSpace(field)
+		if field != "" {
+			fields = append(fields, field)
+		}
+	}
+	return strings.Join(fields, " ")
+}
+
+func jsonSignal(preview string) string {
+	var value any
+	if err := json.Unmarshal([]byte(preview), &value); err != nil {
+		return firstMeaningfulLine(preview)
+	}
+	keys := map[string]struct{}{}
+	collectJSONKeys(value, keys)
+	if len(keys) == 0 {
+		return firstMeaningfulLine(preview)
+	}
+	sorted := make([]string, 0, len(keys))
+	for key := range keys {
+		sorted = append(sorted, key)
+	}
+	sort.Strings(sorted)
+	if len(sorted) > 10 {
+		sorted = sorted[:10]
+	}
+	return strings.Join(sorted, " ")
+}
+
+func collectJSONKeys(value any, keys map[string]struct{}) {
+	switch v := value.(type) {
+	case map[string]any:
+		for key, child := range v {
+			keys[key] = struct{}{}
+			collectJSONKeys(child, keys)
+		}
+	case []any:
+		for _, child := range v {
+			collectJSONKeys(child, keys)
+		}
+	}
+}
+
+func markdownSignal(preview string) string {
+	for _, line := range strings.Split(preview, "\n") {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "#") {
+			return strings.TrimSpace(strings.TrimLeft(line, "#"))
+		}
+	}
+	return firstMeaningfulLine(preview)
+}
+
+var (
+	htmlTitlePattern = regexp.MustCompile(`(?is)<title[^>]*>(.*?)</title>`)
+	xmlTitlePattern  = regexp.MustCompile(`(?is)<(?:[^:>]+:)?title[^>]*>(.*?)</(?:[^:>]+:)?title>`)
+	tagPattern       = regexp.MustCompile(`(?is)<[^>]+>`)
+)
+
+func htmlSignal(preview string) string {
+	if match := htmlTitlePattern.FindStringSubmatch(preview); len(match) > 1 {
+		return cleanMarkupText(match[1])
+	}
+	return firstMeaningfulLine(tagPattern.ReplaceAllString(preview, " "))
+}
+
+func xmlSignal(preview string) string {
+	if match := xmlTitlePattern.FindStringSubmatch(preview); len(match) > 1 {
+		return cleanMarkupText(match[1])
+	}
+	return firstMeaningfulLine(tagPattern.ReplaceAllString(preview, " "))
+}
+
+func emailSignal(preview string) string {
+	for _, line := range strings.Split(preview, "\n") {
+		key, value, ok := strings.Cut(line, ":")
+		if !ok {
+			continue
+		}
+		if strings.EqualFold(strings.TrimSpace(key), "subject") {
+			return strings.TrimSpace(value)
+		}
+	}
+	return firstMeaningfulLine(preview)
+}
+
+func cleanMarkupText(value string) string {
+	value = tagPattern.ReplaceAllString(value, " ")
+	return strings.Join(strings.Fields(value), " ")
 }
 
 func firstMeaningfulLine(text string) string {

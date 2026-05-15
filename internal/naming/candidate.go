@@ -218,6 +218,9 @@ func wordsBase(text string, limit int) string {
 	out := []string{}
 	seen := map[string]bool{}
 	for _, word := range words {
+		if randomToken(word) {
+			continue
+		}
 		word = strings.ToLower(strings.TrimSpace(word))
 		if len(word) < 2 || stopWord(word) || seen[word] {
 			continue
@@ -232,6 +235,42 @@ func wordsBase(text string, limit int) string {
 		return ""
 	}
 	return SanitizeBase(strings.Join(out, "-"))
+}
+
+func randomToken(word string) bool {
+	if len(word) < 10 {
+		return false
+	}
+	letters := 0
+	vowels := 0
+	digits := 0
+	hasUpper := false
+	hasLower := false
+	for _, r := range word {
+		switch {
+		case r >= '0' && r <= '9':
+			digits++
+		case r >= 'a' && r <= 'z':
+			letters++
+			hasLower = true
+			if strings.ContainsRune("aeiou", r) {
+				vowels++
+			}
+		case r >= 'A' && r <= 'Z':
+			letters++
+			hasUpper = true
+			if strings.ContainsRune("AEIOU", r) {
+				vowels++
+			}
+		}
+	}
+	if letters >= 8 && float64(vowels)/float64(letters) < 0.2 {
+		return true
+	}
+	if digits >= 2 && hasUpper && hasLower {
+		return true
+	}
+	return digits >= 4 && letters >= 4
 }
 
 func stopWord(word string) bool {
