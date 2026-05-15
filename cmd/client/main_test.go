@@ -256,7 +256,7 @@ func TestApplyReportReturnsMissingSourceError(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err := applyReport(reportPath, false, false, "")
+	err := applyReport(reportPath, false, false, "", false, false)
 	if err == nil {
 		t.Fatal("expected missing source error")
 	}
@@ -279,7 +279,7 @@ func TestApplyReportValidatesEmptyEntries(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err := applyReport(reportPath, false, false, "")
+	err := applyReport(reportPath, false, false, "", false, false)
 	if err == nil {
 		t.Fatal("expected empty source error")
 	}
@@ -304,7 +304,7 @@ func TestApplyReportSkipsReportSkippedEntries(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := applyReport(reportPath, false, false, ""); err != nil {
+	if err := applyReport(reportPath, false, false, "", false, false); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(dest); !errors.Is(err, os.ErrNotExist) {
@@ -340,7 +340,7 @@ func TestApplyReportIncludesAcceptedSkippedEntries(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := applyReport(reportPath, false, true, ""); err != nil {
+	if err := applyReport(reportPath, false, true, "", false, false); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(acceptedDest); err != nil {
@@ -388,6 +388,67 @@ func TestApplyAcceptedIncludesAcceptedSkippedEntries(t *testing.T) {
 	}
 }
 
+func TestUndoReportRemovesDestinationsInsideWorkdir(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+	if err := os.MkdirAll("input", 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll("output", 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile("input/source.txt", []byte("source"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile("output/copied.txt", []byte("copy"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	reportPath := "report.json"
+	if err := report.Write(reportPath, []report.Entry{{
+		SourcePath:      "input/source.txt",
+		DestinationPath: "output/copied.txt",
+	}}); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := undoReport(reportPath, false, true, false); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat("output/copied.txt"); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("expected copied file removed, stat err=%v", err)
+	}
+	if _, err := os.Stat("input/source.txt"); err != nil {
+		t.Fatalf("source file should remain: %v", err)
+	}
+}
+
+func TestUndoReportRejectsOutsideWorkdir(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+	outside := filepath.Join(t.TempDir(), "copied.txt")
+	if err := os.WriteFile(outside, []byte("copy"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	reportPath := "report.json"
+	if err := report.Write(reportPath, []report.Entry{{
+		SourcePath:      "input/source.txt",
+		DestinationPath: outside,
+	}}); err != nil {
+		t.Fatal(err)
+	}
+
+	err := undoReport(reportPath, false, true, false)
+	if err == nil {
+		t.Fatal("expected outside workdir error")
+	}
+	if !strings.Contains(err.Error(), "outside current workdir") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if _, err := os.Stat(outside); err != nil {
+		t.Fatalf("outside file should remain: %v", err)
+	}
+}
+
 func TestApplyReportCanWriteReviewReport(t *testing.T) {
 	dir := t.TempDir()
 	source := filepath.Join(dir, "source.txt")
@@ -406,7 +467,7 @@ func TestApplyReportCanWriteReviewReport(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := applyReport(reportPath, true, false, reviewPath); err != nil {
+	if err := applyReport(reportPath, true, false, reviewPath, false, false); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(reviewPath); err != nil {
@@ -439,6 +500,17 @@ func TestUpdateReviewStatus(t *testing.T) {
 	}
 	if got.Summary.AcceptedCount != 1 {
 		t.Fatalf("accepted summary = %d, want 1", got.Summary.AcceptedCount)
+	}
+}
+
+func TestJSONSummaryLine(t *testing.T) {
+	line := jsonLine("summary", report.Summary{TotalFiles: 3, PlannedCount: 2, SkippedCount: 1})
+	var got map[string]any
+	if err := json.Unmarshal([]byte(line), &got); err != nil {
+		t.Fatalf("summary should be valid json: %v\n%s", err, line)
+	}
+	if got["kind"] != "summary" {
+		t.Fatalf("kind = %v, want summary", got["kind"])
 	}
 }
 

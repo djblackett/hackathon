@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -76,6 +77,14 @@ func runApp(args []string) error {
 				Usage: "return all errors joined together",
 			},
 			&cli.BoolFlag{
+				Name:  "quiet",
+				Usage: "suppress progress logs and human-readable summaries",
+			},
+			&cli.BoolFlag{
+				Name:  "json-summary",
+				Usage: "print machine-readable JSON summaries",
+			},
+			&cli.BoolFlag{
 				Name:  "flatten",
 				Value: false,
 				Usage: "flatten output directory structure",
@@ -107,6 +116,10 @@ func runApp(args []string) error {
 			&cli.StringFlag{
 				Name:  "apply-report",
 				Usage: "copy files using destinations from a previously generated JSON report",
+			},
+			&cli.StringFlag{
+				Name:  "undo-report",
+				Usage: "delete copied destination files listed in a JSON report",
 			},
 			&cli.StringFlag{
 				Name:  "apply-accepted",
@@ -155,6 +168,8 @@ func runApp(args []string) error {
 			dry := c.Bool("dry-run")
 			renameMode := c.Bool("rename")
 			debug := c.Bool("debug")
+			quiet := c.Bool("quiet")
+			jsonSummary := c.Bool("json-summary")
 			flatten := c.Bool("flatten")
 			strategy := c.String("strategy")
 			confidenceThreshold := c.Float64("confidence-threshold")
@@ -162,6 +177,7 @@ func runApp(args []string) error {
 			minConfidenceToCopy := c.Float64("min-confidence-to-copy")
 			reportPath := c.String("report")
 			applyReportPath := c.String("apply-report")
+			undoReportPath := c.String("undo-report")
 			applyAcceptedPath := c.String("apply-accepted")
 			listPendingPath := c.String("list-pending")
 			setReviewStatusPath := c.String("set-review-status")
@@ -171,6 +187,11 @@ func runApp(args []string) error {
 			includeSkipped := c.Bool("include-skipped")
 			reviewReportPath := c.String("review-report")
 
+			if quiet {
+				previous := log.Writer()
+				log.SetOutput(io.Discard)
+				defer log.SetOutput(previous)
+			}
 			if explainPath != "" {
 				return explainFile(explainPath, os.Stdout)
 			}
@@ -180,11 +201,14 @@ func runApp(args []string) error {
 			if listPendingPath != "" {
 				return listPendingReport(listPendingPath, os.Stdout)
 			}
+			if undoReportPath != "" {
+				return undoReport(undoReportPath, dry, quiet, jsonSummary)
+			}
 			if applyAcceptedPath != "" {
-				return applyReport(applyAcceptedPath, dry, true, reviewReportPath)
+				return applyReport(applyAcceptedPath, dry, true, reviewReportPath, quiet, jsonSummary)
 			}
 			if applyReportPath != "" {
-				return applyReport(applyReportPath, dry, includeSkipped, reviewReportPath)
+				return applyReport(applyReportPath, dry, includeSkipped, reviewReportPath, quiet, jsonSummary)
 			}
 
 			switch strategy {
@@ -370,7 +394,7 @@ func runApp(args []string) error {
 					return err
 				}
 			}
-			fmt.Fprintln(os.Stdout, formatSummary(report.BuildSummary(reportEntries)))
+			printRunSummary(report.BuildSummary(reportEntries), quiet, jsonSummary)
 
 			var (
 				firstErr error   // keeps behaviour for non‑debug
@@ -399,7 +423,7 @@ func runApp(args []string) error {
 	return app.Run(args)
 }
 
-func applyReport(path string, dry bool, includeSkipped bool, reviewReportPath string) error {
+func applyReport(path string, dry bool, includeSkipped bool, reviewReportPath string, quiet bool, jsonSummary bool) error {
 	planned, err := report.Read(path)
 	if err != nil {
 		return err
@@ -448,7 +472,47 @@ func applyReport(path string, dry bool, includeSkipped bool, reviewReportPath st
 		applied++
 		log.Printf("[APPLY] %s  →  %s\n", entry.SourcePath, entry.DestinationPath)
 	}
-	fmt.Fprintf(os.Stdout, "apply_summary: total=%d applied=%d dry_run=%d skipped=%d\n", len(planned.Entries), applied, dryRunCount, skippedCount)
+	printOperationSummary("apply_summary", operationSummary{Total: len(planned.Entries), Applied: applied, DryRun: dryRunCount, Skipped: skippedCount}, quiet, jsonSummary)
+	return nil
+}
+
+func undoReport(path string, dry bool, quiet bool, jsonSummary bool) error {
+	planned, err := report.Read(path)
+	if err != nil {
+		return err
+	}
+	removed := 0
+	dryRunCount := 0
+	skipped := 0
+	for i, entry := range planned.Entries {
+		if entry.DestinationPath == "" {
+			continue
+		}
+		if entry.SourcePath != "" && samePath(entry.SourcePath, entry.DestinationPath) {
+			return fmt.Errorf("report entry %d destination matches source path: %s", i, entry.DestinationPath)
+		}
+		if err := validateUndoDestination(entry.DestinationPath); err != nil {
+			return fmt.Errorf("report entry %d cannot be undone safely: %w", i, err)
+		}
+		if _, err := os.Stat(entry.DestinationPath); err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				skipped++
+				continue
+			}
+			return fmt.Errorf("report entry %d destination could not be checked: %s: %w", i, entry.DestinationPath, err)
+		}
+		if dry {
+			dryRunCount++
+			log.Printf("[DRY-UNDO] %s\n", entry.DestinationPath)
+			continue
+		}
+		if err := os.Remove(entry.DestinationPath); err != nil {
+			return fmt.Errorf("report entry %d destination could not be removed: %s: %w", i, entry.DestinationPath, err)
+		}
+		removed++
+		log.Printf("[UNDO] %s\n", entry.DestinationPath)
+	}
+	printOperationSummary("undo_summary", operationSummary{Total: len(planned.Entries), Removed: removed, DryRun: dryRunCount, Skipped: skipped}, quiet, jsonSummary)
 	return nil
 }
 
@@ -633,4 +697,92 @@ func formatSummary(summary report.Summary) string {
 		summary.WarningsCount,
 		summary.AIFallbackCount,
 	)
+}
+
+func printRunSummary(summary report.Summary, quiet bool, jsonSummary bool) {
+	if jsonSummary {
+		fmt.Fprintln(os.Stdout, jsonLine("summary", summary))
+		return
+	}
+	if !quiet {
+		fmt.Fprintln(os.Stdout, formatSummary(summary))
+	}
+}
+
+type operationSummary struct {
+	Total   int `json:"total"`
+	Applied int `json:"applied,omitempty"`
+	Removed int `json:"removed,omitempty"`
+	DryRun  int `json:"dry_run"`
+	Skipped int `json:"skipped"`
+}
+
+func printOperationSummary(name string, summary operationSummary, quiet bool, jsonSummary bool) {
+	if jsonSummary {
+		fmt.Fprintln(os.Stdout, jsonLine(name, summary))
+		return
+	}
+	if quiet {
+		return
+	}
+	switch name {
+	case "apply_summary":
+		fmt.Fprintf(os.Stdout, "apply_summary: total=%d applied=%d dry_run=%d skipped=%d\n", summary.Total, summary.Applied, summary.DryRun, summary.Skipped)
+	case "undo_summary":
+		fmt.Fprintf(os.Stdout, "undo_summary: total=%d removed=%d dry_run=%d skipped=%d\n", summary.Total, summary.Removed, summary.DryRun, summary.Skipped)
+	}
+}
+
+func jsonLine(kind string, payload any) string {
+	out := map[string]any{"kind": kind, "summary": payload}
+	b, err := json.Marshal(out)
+	if err != nil {
+		return fmt.Sprintf(`{"kind":%q,"error":%q}`, kind, err.Error())
+	}
+	return string(b)
+}
+
+func validateUndoDestination(path string) error {
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return err
+	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	cwd, err = filepath.Abs(cwd)
+	if err != nil {
+		return err
+	}
+	rel, err := filepath.Rel(cwd, abs)
+	if err != nil {
+		return err
+	}
+	if rel == "." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) || rel == ".." || filepath.IsAbs(rel) {
+		return fmt.Errorf("destination is outside current workdir: %s", path)
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil
+		}
+		return err
+	}
+	if info.IsDir() {
+		return fmt.Errorf("destination is a directory: %s", path)
+	}
+	if !info.Mode().IsRegular() {
+		return fmt.Errorf("destination is not a regular file: %s", path)
+	}
+	return nil
+}
+
+func samePath(left, right string) bool {
+	leftAbs, leftErr := filepath.Abs(left)
+	rightAbs, rightErr := filepath.Abs(right)
+	if leftErr != nil || rightErr != nil {
+		return filepath.Clean(left) == filepath.Clean(right)
+	}
+	return filepath.Clean(leftAbs) == filepath.Clean(rightAbs)
 }

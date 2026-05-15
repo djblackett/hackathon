@@ -158,6 +158,8 @@ go run ./cmd/client/main.go --input ./files/input --dry-run
 | `--dry-run` | Preview changes without processing | `false` |
 | `--rename` | Rename files in place instead of copying to output | `false` |
 | `--debug` | Return all errors joined together | `false` |
+| `--quiet` | Suppress progress logs and human-readable summaries | `false` |
+| `--json-summary` | Print machine-readable JSON summaries | `false` |
 | `--flatten` | Flatten output directory structure | `false` |
 | `--strategy` | Rename strategy: `auto`, `metadata-only`, or `ai-only` | `auto` |
 | `--confidence-threshold` | Minimum local confidence before `auto` skips AI fallback | `0.75` |
@@ -165,6 +167,7 @@ go run ./cmd/client/main.go --input ./files/input --dry-run
 | `--min-confidence-to-copy` | Minimum confidence required before copying files; `0` disables copy skipping | `0` |
 | `--report` | Write a JSON report of processed files | none |
 | `--apply-report` | Copy files using destinations from a previous JSON report | none |
+| `--undo-report` | Delete copied destination files listed in a JSON report | none |
 | `--apply-accepted` | Copy planned files and accepted skipped entries from a JSON report | none |
 | `--list-pending` | Print pending review entries from a JSON report | none |
 | `--set-review-status` | Update review status values in a JSON report | none |
@@ -201,6 +204,9 @@ go run ./cmd/client/main.go --input ./files/input --dry-run
 # Apply a reviewed dry-run report
 ./ai-renamer --apply-report report.json
 
+# Apply a report with script-friendly output
+./ai-renamer --apply-report report.json --quiet --json-summary
+
 # Copy only confident local matches; weak matches stay in the report as skipped
 ./ai-renamer --input ./recovered --strategy metadata-only --min-confidence-to-copy 0.75 --report report.json
 
@@ -218,6 +224,9 @@ go run ./cmd/client/main.go --input ./files/input --dry-run
 
 # Apply planned entries plus skipped entries marked accepted
 ./ai-renamer --apply-accepted report.json
+
+# Undo copied destination files listed in a report
+./ai-renamer --undo-report report.json
 
 # Copy to custom output directory with flattened structure
 ./ai-renamer --input ./files --output ./renamed --flatten

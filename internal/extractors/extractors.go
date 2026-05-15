@@ -20,7 +20,6 @@ func Register(e Extractor) { registered = append(registered, e) }
 
 // Walk over dir; for each supported file call fn(path, content)
 func Walk(dir string, types map[string]struct{}, fn func(string, string) error) error {
-	fmt.Printf("Registered extractors: %d\n", len(registered)) // Add this debug line
 	return filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
 			return err
@@ -48,7 +47,6 @@ func Walk(dir string, types map[string]struct{}, fn func(string, string) error) 
 // supported file. Existing extractors can opt into richer metadata by
 // implementing InfoExtractor; otherwise the plain extracted content is wrapped.
 func WalkInfo(dir string, types map[string]struct{}, fn func(ExtractedFileInfo) error) error {
-	fmt.Printf("Registered extractors: %d\n", len(registered))
 	return filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
 			return err
