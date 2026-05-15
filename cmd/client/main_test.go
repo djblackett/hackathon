@@ -350,6 +350,43 @@ func TestApplyReportIncludesAcceptedSkippedEntries(t *testing.T) {
 	}
 }
 
+func TestApplyAcceptedIncludesAcceptedSkippedEntries(t *testing.T) {
+	dir := t.TempDir()
+	source := filepath.Join(dir, "source.txt")
+	acceptedDest := filepath.Join(dir, "accepted.txt")
+	pendingDest := filepath.Join(dir, "pending.txt")
+	reportPath := filepath.Join(dir, "report.json")
+	if err := os.WriteFile(source, []byte("source"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := report.Write(reportPath, []report.Entry{
+		{
+			SourcePath:      source,
+			DestinationPath: acceptedDest,
+			Skipped:         true,
+			ReviewStatus:    "accepted",
+		},
+		{
+			SourcePath:      source,
+			DestinationPath: pendingDest,
+			Skipped:         true,
+			ReviewStatus:    "pending",
+		},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := runApp([]string{"ai-file-renamer", "--apply-accepted", reportPath}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(acceptedDest); err != nil {
+		t.Fatalf("accepted skipped entry should copy: %v", err)
+	}
+	if _, err := os.Stat(pendingDest); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("pending skipped entry should not copy, stat err=%v", err)
+	}
+}
+
 func TestApplyReportCanWriteReviewReport(t *testing.T) {
 	dir := t.TempDir()
 	source := filepath.Join(dir, "source.txt")
@@ -373,6 +410,34 @@ func TestApplyReportCanWriteReviewReport(t *testing.T) {
 	}
 	if _, err := os.Stat(reviewPath); err != nil {
 		t.Fatalf("expected review report: %v", err)
+	}
+}
+
+func TestUpdateReviewStatus(t *testing.T) {
+	reportPath := filepath.Join(t.TempDir(), "report.json")
+	if err := report.Write(reportPath, []report.Entry{{
+		SourcePath:      "input/pending.txt",
+		DestinationPath: "output/pending.txt",
+		Skipped:         true,
+		ReviewStatus:    "pending",
+	}}); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := updateReviewStatus(reportPath, []string{"pending.txt=accepted"}, []string{"pending.txt=looks good"}); err != nil {
+		t.Fatal(err)
+	}
+
+	got := readReport(t, reportPath)
+	entry := got.Entries[0]
+	if entry.ReviewStatus != "accepted" {
+		t.Fatalf("review status = %q, want accepted", entry.ReviewStatus)
+	}
+	if entry.ReviewNote != "looks good" {
+		t.Fatalf("review note = %q, want note", entry.ReviewNote)
+	}
+	if got.Summary.AcceptedCount != 1 {
+		t.Fatalf("accepted summary = %d, want 1", got.Summary.AcceptedCount)
 	}
 }
 
@@ -412,6 +477,61 @@ func TestListPendingReport(t *testing.T) {
 	}
 	if strings.Contains(got, "accepted.txt") {
 		t.Fatalf("accepted entry should not be listed:\n%s", got)
+	}
+}
+
+func TestExplainFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "note.txt")
+	if err := os.WriteFile(path, []byte("# Incident Response Runbook\n\nEscalation steps.\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	var out bytes.Buffer
+	if err := explainFile(path, &out); err != nil {
+		t.Fatal(err)
+	}
+
+	got := out.String()
+	for _, want := range []string{"source:", "detected_type: markdown", "suggested_name: incident-response-runbook.md", "evidence: markdown-heading", "top_evidence:"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("explain output missing %q:\n%s", want, got)
+		}
+	}
+}
+
+func TestClientDryRunReportInputCorpus(t *testing.T) {
+	root := repoRoot(t)
+	outputDir := t.TempDir()
+	reportPath := filepath.Join(t.TempDir(), "report.json")
+
+	runClient(t, root,
+		"--strategy", "metadata-only",
+		"--dry-run",
+		"--input", filepath.Join(root, "files/input"),
+		"--output", outputDir,
+		"--min-confidence-to-copy", "0.75",
+		"--report", reportPath,
+	)
+
+	got := readReport(t, reportPath)
+	if got.Summary.TotalFiles != 17 {
+		t.Fatalf("total files = %d, want 17", got.Summary.TotalFiles)
+	}
+	if got.Summary.PlannedCount != 15 || got.Summary.SkippedCount != 2 || got.Summary.PendingReviewCount != 2 {
+		t.Fatalf("unexpected summary: %+v", got.Summary)
+	}
+
+	bySource := entriesByBase(got)
+	assertSuggestedName(t, bySource, "2026-01-22_00-59-57.mkv", "video-2026-01-22-00-59-57.mkv")
+	assertSuggestedName(t, bySource, "cliffs.png", "cliffs.png")
+	assertSuggestedName(t, bySource, "sdfjgbfh4644623.docx", "monumental-construction-panama-canal.docx")
+	assertSuggestedName(t, bySource, "text.txt", "hello-there-general-kenobi-roger.txt")
+	assertSuggestedName(t, bySource, "f823939887.txt", "unidentified-content.txt")
+	if !bySource["text.txt"].Skipped {
+		t.Fatal("short note should stay pending review")
+	}
+	if !bySource["f823939887.txt"].Skipped {
+		t.Fatal("random text should stay pending review")
 	}
 }
 

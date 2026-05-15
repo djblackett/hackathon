@@ -85,6 +85,31 @@ func WalkInfo(dir string, types map[string]struct{}, fn func(ExtractedFileInfo) 
 	})
 }
 
+func ExtractInfoForPath(path string) (ExtractedFileInfo, error) {
+	detection := filetype.Detect(path)
+	for _, ex := range registered {
+		if !extractorCanHandle(ex, path, detection.Type, detection.Subtype) {
+			continue
+		}
+		if infoEx, ok := ex.(InfoExtractor); ok {
+			info, err := infoEx.ExtractInfo(path)
+			if err != nil {
+				return ExtractedFileInfo{}, err
+			}
+			applyDetection(&info, detection)
+			return info, nil
+		}
+		content, err := ex.Extract(path)
+		if err != nil {
+			return ExtractedFileInfo{}, err
+		}
+		info := NewExtractedFileInfo(path, detection.Type, content)
+		applyDetection(&info, detection)
+		return info, nil
+	}
+	return ExtractedFileInfo{}, fmt.Errorf("no extractor for %s", path)
+}
+
 func allowedType(types map[string]struct{}, values ...string) bool {
 	for _, value := range values {
 		if value == "" {

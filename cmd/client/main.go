@@ -109,8 +109,28 @@ func runApp(args []string) error {
 				Usage: "copy files using destinations from a previously generated JSON report",
 			},
 			&cli.StringFlag{
+				Name:  "apply-accepted",
+				Usage: "copy planned files and accepted skipped entries from a JSON report",
+			},
+			&cli.StringFlag{
 				Name:  "list-pending",
 				Usage: "print pending review entries from a JSON report",
+			},
+			&cli.StringFlag{
+				Name:  "set-review-status",
+				Usage: "update review status values in a JSON report",
+			},
+			&cli.StringSliceFlag{
+				Name:  "review-entry",
+				Usage: "review update in source=status form; status may be accepted, rejected, or pending",
+			},
+			&cli.StringSliceFlag{
+				Name:  "review-note",
+				Usage: "review note update in source=note form",
+			},
+			&cli.StringFlag{
+				Name:  "explain",
+				Usage: "explain the metadata filename suggestion for one file",
 			},
 			&cli.BoolFlag{
 				Name:  "include-skipped",
@@ -142,12 +162,26 @@ func runApp(args []string) error {
 			minConfidenceToCopy := c.Float64("min-confidence-to-copy")
 			reportPath := c.String("report")
 			applyReportPath := c.String("apply-report")
+			applyAcceptedPath := c.String("apply-accepted")
 			listPendingPath := c.String("list-pending")
+			setReviewStatusPath := c.String("set-review-status")
+			reviewEntries := c.StringSlice("review-entry")
+			reviewNotes := c.StringSlice("review-note")
+			explainPath := c.String("explain")
 			includeSkipped := c.Bool("include-skipped")
 			reviewReportPath := c.String("review-report")
 
+			if explainPath != "" {
+				return explainFile(explainPath, os.Stdout)
+			}
+			if setReviewStatusPath != "" {
+				return updateReviewStatus(setReviewStatusPath, reviewEntries, reviewNotes)
+			}
 			if listPendingPath != "" {
 				return listPendingReport(listPendingPath, os.Stdout)
+			}
+			if applyAcceptedPath != "" {
+				return applyReport(applyAcceptedPath, dry, true, reviewReportPath)
 			}
 			if applyReportPath != "" {
 				return applyReport(applyReportPath, dry, includeSkipped, reviewReportPath)
@@ -336,6 +370,7 @@ func runApp(args []string) error {
 					return err
 				}
 			}
+			fmt.Fprintln(os.Stdout, formatSummary(report.BuildSummary(reportEntries)))
 
 			var (
 				firstErr error   // keeps behaviour for non‑debug
@@ -375,6 +410,9 @@ func applyReport(path string, dry bool, includeSkipped bool, reviewReportPath st
 		}
 	}
 
+	applied := 0
+	dryRunCount := 0
+	skippedCount := 0
 	for i, entry := range planned.Entries {
 		if entry.SourcePath == "" && entry.DestinationPath == "" {
 			continue
@@ -394,19 +432,23 @@ func applyReport(path string, dry bool, includeSkipped bool, reviewReportPath st
 		if entry.Skipped {
 			status := report.NormalizeReviewStatus(entry.ReviewStatus)
 			if !includeSkipped || status != "accepted" {
+				skippedCount++
 				log.Printf("[SKIP] %s  →  %s method=apply-report status=%s reason=%s\n", entry.SourcePath, entry.DestinationPath, status, entry.SkipReason)
 				continue
 			}
 		}
 		if dry {
+			dryRunCount++
 			log.Printf("[DRY] %s  →  %s method=apply-report confidence=%.2f\n", entry.SourcePath, entry.DestinationPath, entry.Confidence)
 			continue
 		}
 		if err := utils.CopyFileToPath(entry.SourcePath, entry.DestinationPath); err != nil {
 			return err
 		}
+		applied++
 		log.Printf("[APPLY] %s  →  %s\n", entry.SourcePath, entry.DestinationPath)
 	}
+	fmt.Fprintf(os.Stdout, "apply_summary: total=%d applied=%d dry_run=%d skipped=%d\n", len(planned.Entries), applied, dryRunCount, skippedCount)
 	return nil
 }
 
@@ -454,4 +496,141 @@ func pendingEntries(entries []report.Entry) []report.Entry {
 		return pending[i].SourcePath < pending[j].SourcePath
 	})
 	return pending
+}
+
+func updateReviewStatus(path string, updates []string, notes []string) error {
+	if len(updates) == 0 && len(notes) == 0 {
+		return fmt.Errorf("at least one --review-entry or --review-note is required")
+	}
+	planned, err := report.Read(path)
+	if err != nil {
+		return err
+	}
+	changed := 0
+	for _, raw := range updates {
+		key, value, ok := strings.Cut(raw, "=")
+		if !ok || strings.TrimSpace(key) == "" {
+			return fmt.Errorf("invalid --review-entry %q: use source=status", raw)
+		}
+		status := report.NormalizeReviewStatus(value)
+		n, err := updateMatchingEntries(planned.Entries, key, func(entry *report.Entry) {
+			entry.ReviewStatus = status
+			if entry.Skipped && status == "accepted" {
+				entry.SkipReason = ""
+			}
+		})
+		if err != nil {
+			return err
+		}
+		planned.Entries = n.entries
+		changed += n.count
+	}
+	for _, raw := range notes {
+		key, value, ok := strings.Cut(raw, "=")
+		if !ok || strings.TrimSpace(key) == "" {
+			return fmt.Errorf("invalid --review-note %q: use source=note", raw)
+		}
+		n, err := updateMatchingEntries(planned.Entries, key, func(entry *report.Entry) {
+			entry.ReviewNote = value
+		})
+		if err != nil {
+			return err
+		}
+		planned.Entries = n.entries
+		changed += n.count
+	}
+	if err := report.Write(path, planned.Entries); err != nil {
+		return err
+	}
+	fmt.Fprintf(os.Stdout, "Updated review entries: %d\n", changed)
+	fmt.Fprintln(os.Stdout, formatSummary(report.BuildSummary(planned.Entries)))
+	return nil
+}
+
+type updateResult struct {
+	entries []report.Entry
+	count   int
+}
+
+func updateMatchingEntries(entries []report.Entry, selector string, update func(*report.Entry)) (updateResult, error) {
+	selector = strings.TrimSpace(selector)
+	matches := []int{}
+	for i, entry := range entries {
+		if reportEntryMatches(entry, selector) {
+			matches = append(matches, i)
+		}
+	}
+	if len(matches) == 0 {
+		return updateResult{}, fmt.Errorf("no report entry matches %q", selector)
+	}
+	if len(matches) > 1 {
+		return updateResult{}, fmt.Errorf("multiple report entries match %q; use the full source path", selector)
+	}
+	update(&entries[matches[0]])
+	return updateResult{entries: entries, count: 1}, nil
+}
+
+func reportEntryMatches(entry report.Entry, selector string) bool {
+	return entry.SourcePath == selector ||
+		entry.DestinationPath == selector ||
+		entry.SuggestedName == selector ||
+		filepath.Base(entry.SourcePath) == selector
+}
+
+func explainFile(path string, out io.Writer) error {
+	info, err := extractors.ExtractInfoForPath(path)
+	if err != nil {
+		return err
+	}
+	suggestion := analysis.GenerateFilename(info)
+	ext := filepath.Ext(path)
+	if info.SuggestedExtension != "" {
+		ext = "." + info.SuggestedExtension
+	}
+	fmt.Fprintf(out, "source: %s\n", path)
+	fmt.Fprintf(out, "detected_type: %s\n", info.DetectedType)
+	if info.SuggestedExtension != "" {
+		fmt.Fprintf(out, "suggested_extension: %s\n", info.SuggestedExtension)
+	}
+	fmt.Fprintf(out, "suggested_name: %s%s\n", suggestion.Filename, ext)
+	fmt.Fprintf(out, "method: %s\n", suggestion.Method)
+	fmt.Fprintf(out, "confidence: %.2f\n", suggestion.Confidence)
+	if len(suggestion.Evidence) > 0 {
+		fmt.Fprintf(out, "evidence: %s\n", strings.Join(suggestion.Evidence, ", "))
+	}
+	if len(info.Warnings) > 0 {
+		fmt.Fprintf(out, "warnings: %s\n", strings.Join(info.Warnings, "; "))
+	}
+	samples := analysis.RankEvidence(info)
+	if len(samples) > 0 {
+		fmt.Fprintln(out, "top_evidence:")
+		for i, sample := range samples {
+			if i >= 5 {
+				break
+			}
+			fmt.Fprintf(out, "- %s %.2f %s\n", sample.Source, sample.Score, trimExplain(sample.Text, 120))
+		}
+	}
+	return nil
+}
+
+func trimExplain(s string, max int) string {
+	s = strings.Join(strings.Fields(s), " ")
+	if len(s) <= max {
+		return s
+	}
+	return strings.TrimSpace(s[:max])
+}
+
+func formatSummary(summary report.Summary) string {
+	return fmt.Sprintf(
+		"summary: total=%d planned=%d copied=%d skipped=%d pending_review=%d warnings=%d ai_fallback=%d",
+		summary.TotalFiles,
+		summary.PlannedCount,
+		summary.CopiedCount,
+		summary.SkippedCount,
+		summary.PendingReviewCount,
+		summary.WarningsCount,
+		summary.AIFallbackCount,
+	)
 }

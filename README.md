@@ -165,7 +165,12 @@ go run ./cmd/client/main.go --input ./files/input --dry-run
 | `--min-confidence-to-copy` | Minimum confidence required before copying files; `0` disables copy skipping | `0` |
 | `--report` | Write a JSON report of processed files | none |
 | `--apply-report` | Copy files using destinations from a previous JSON report | none |
+| `--apply-accepted` | Copy planned files and accepted skipped entries from a JSON report | none |
 | `--list-pending` | Print pending review entries from a JSON report | none |
+| `--set-review-status` | Update review status values in a JSON report | none |
+| `--review-entry` | Review update in `source=status` form; repeatable | none |
+| `--review-note` | Review note update in `source=note` form; repeatable | none |
+| `--explain` | Explain the metadata filename suggestion for one file | none |
 | `--include-skipped` | When applying a report, also copy skipped entries marked `review_status=accepted` | `false` |
 | `--review-report` | Write a Markdown review file for skipped or reviewed report entries | none |
 
@@ -205,8 +210,14 @@ go run ./cmd/client/main.go --input ./files/input --dry-run
 # Print pending review entries from a report
 ./ai-renamer --list-pending report.json
 
-# After editing report.json and setting selected skipped entries to "review_status": "accepted"
-./ai-renamer --apply-report report.json --include-skipped
+# Mark a pending entry accepted without hand-editing JSON
+./ai-renamer --set-review-status report.json --review-entry files/input/foo.txt=accepted --review-note "files/input/foo.txt=looks right"
+
+# Explain why one file got its suggested name
+./ai-renamer --explain files/input/foo.txt
+
+# Apply planned entries plus skipped entries marked accepted
+./ai-renamer --apply-accepted report.json
 
 # Copy to custom output directory with flattened structure
 ./ai-renamer --input ./files --output ./renamed --flatten
