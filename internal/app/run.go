@@ -41,8 +41,12 @@ func Scan(ctx context.Context, cfg ScanConfig) (plan.Plan, error) {
 	nativeExtractor := native.Extractor{}
 	var tikaExtractor *tikaextractor.Extractor
 	tikaUnavailableWarning := ""
-	if !cfg.NoTika && cfg.TikaURL != "" {
-		client, err := tika.NewClientWithHTTPClient(cfg.TikaURL, &http.Client{Timeout: cfg.TikaTimeout})
+	if !cfg.NoTika && (cfg.TikaURL != "" || cfg.TikaClient != nil) {
+		client := cfg.TikaClient
+		var err error
+		if client == nil {
+			client, err = tika.NewClientWithHTTPClient(cfg.TikaURL, &http.Client{Timeout: cfg.TikaTimeout})
+		}
 		if err != nil {
 			if cfg.RequireTika {
 				return plan.Plan{}, err

@@ -2,9 +2,9 @@ package tesseract
 
 import (
 	"context"
-	"os/exec"
 
 	"github.com/djblackett/bootdev-hackathon/internal/evidence"
+	"github.com/djblackett/bootdev-hackathon/internal/tools"
 )
 
 type Extractor struct{}
@@ -12,8 +12,7 @@ type Extractor struct{}
 func (Extractor) Name() evidence.EvidenceSource { return evidence.SourceTesseract }
 
 func (Extractor) Available(ctx context.Context) bool {
-	_, err := exec.LookPath("tesseract")
-	return err == nil
+	return tools.Available("tesseract")
 }
 
 func (Extractor) Extract(ctx context.Context, path string) (evidence.PartialEvidence, error) {

@@ -2,9 +2,9 @@ package jhove
 
 import (
 	"context"
-	"os/exec"
 
 	"github.com/djblackett/bootdev-hackathon/internal/evidence"
+	"github.com/djblackett/bootdev-hackathon/internal/tools"
 )
 
 type Extractor struct{}
@@ -12,8 +12,7 @@ type Extractor struct{}
 func (Extractor) Name() evidence.EvidenceSource { return evidence.SourceJHOVE }
 
 func (Extractor) Available(ctx context.Context) bool {
-	_, err := exec.LookPath("jhove")
-	return err == nil
+	return tools.Available("jhove")
 }
 
 func (Extractor) Extract(ctx context.Context, path string) (evidence.PartialEvidence, error) {

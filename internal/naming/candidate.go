@@ -78,7 +78,7 @@ func candidatesForEvidence(ev evidence.FileEvidence) []scoredCandidate {
 	if date != "" && title != "" {
 		out = append(out, scoredCandidate{
 			Base:    date + "_" + title,
-			Score:   0.88,
+			Score:   scoreWithSourceBoost(0.88, ev),
 			Reasons: []string{"found useful date evidence", titleReason},
 		})
 	}
@@ -167,7 +167,7 @@ func strongestDate(ev evidence.FileEvidence) string {
 		if !strings.Contains(lower, "date") && !strings.Contains(lower, "created") && !strings.Contains(lower, "modified") {
 			continue
 		}
-		if date := normalizeDate(ev.Metadata[key]); date != "" {
+		if date := normalizeDateOnly(ev.Metadata[key]); date != "" {
 			return date
 		}
 	}
@@ -182,6 +182,26 @@ func strongestDate(ev evidence.FileEvidence) string {
 	return ""
 }
 
+func scoreWithSourceBoost(score float64, ev evidence.FileEvidence) float64 {
+	hasNative := false
+	hasOther := false
+	for _, source := range ev.Sources {
+		switch source {
+		case evidence.SourceNativeMIME:
+			hasNative = true
+		default:
+			hasOther = true
+		}
+	}
+	if hasNative && hasOther {
+		score += 0.05
+	}
+	if score > 0.95 {
+		return 0.95
+	}
+	return score
+}
+
 func normalizeDate(value string) string {
 	match := datePattern.FindStringSubmatch(value)
 	if len(match) == 0 {
@@ -193,6 +213,14 @@ func normalizeDate(value string) string {
 			sec = "00"
 		}
 		return fmt.Sprintf("%s-%s-%s_%s-%s-%s", match[1], match[2], match[3], match[4], match[5], sec)
+	}
+	return fmt.Sprintf("%s-%s-%s", match[1], match[2], match[3])
+}
+
+func normalizeDateOnly(value string) string {
+	match := datePattern.FindStringSubmatch(value)
+	if len(match) == 0 {
+		return ""
 	}
 	return fmt.Sprintf("%s-%s-%s", match[1], match[2], match[3])
 }

@@ -1,11 +1,16 @@
 package app
 
-import "time"
+import (
+	"time"
+
+	"github.com/djblackett/bootdev-hackathon/internal/tika"
+)
 
 type ScanConfig struct {
 	Root           string
 	OutPath        string
 	TikaURL        string
+	TikaClient     *tika.Client
 	NoTika         bool
 	RequireTika    bool
 	TikaTimeout    time.Duration
