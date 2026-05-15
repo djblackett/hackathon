@@ -153,6 +153,15 @@ func runApp(args []string) error {
 				Name:  "review-report",
 				Usage: "write a Markdown review file for skipped or reviewed report entries",
 			},
+			&cli.StringFlag{
+				Name:  "tika-url",
+				Value: cfg.TikaURL,
+				Usage: "optional Apache Tika server URL for fallback extraction",
+			},
+			&cli.BoolFlag{
+				Name:  "disable-tika",
+				Usage: "disable Apache Tika fallback even when TIKA_URL is set",
+			},
 			&cli.StringSliceFlag{ // allowed extensions. Overrides defaultFileTypes.
 				Name:  "types",
 				Value: cli.NewStringSlice(defaultFileTypes...),
@@ -186,6 +195,14 @@ func runApp(args []string) error {
 			explainPath := c.String("explain")
 			includeSkipped := c.Bool("include-skipped")
 			reviewReportPath := c.String("review-report")
+			tikaURL := c.String("tika-url")
+			if c.Bool("disable-tika") {
+				tikaURL = ""
+			}
+
+			if err := extractors.ConfigureTika(tikaURL); err != nil {
+				return err
+			}
 
 			if quiet {
 				previous := log.Writer()

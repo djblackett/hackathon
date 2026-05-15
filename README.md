@@ -146,6 +146,20 @@ For GPU acceleration or a more detailed privacy setup, see [Privacy and Security
 go run ./cmd/client/main.go --input ./files/input --dry-run
 ```
 
+#### Optional: Apache Tika Fallback
+
+Apache Tika can run as a Docker sidecar to broaden document parsing without replacing the app's higher-signal local extractors.
+
+```bash
+# Start the Tika sidecar
+docker compose up tika -d
+
+# Use Tika as fallback extraction for weak or unsupported local parses
+TIKA_URL=http://localhost:9998 go run ./cmd/client/main.go --input ./files/input --strategy metadata-only --dry-run
+```
+
+When running the client through the default Docker Compose file, `TIKA_URL=http://tika:9998` is already configured.
+
 ## CLI Options
 
 | Flag | Description | Default |
@@ -176,6 +190,8 @@ go run ./cmd/client/main.go --input ./files/input --dry-run
 | `--explain` | Explain the metadata filename suggestion for one file | none |
 | `--include-skipped` | When applying a report, also copy skipped entries marked `review_status=accepted` | `false` |
 | `--review-report` | Write a Markdown review file for skipped or reviewed report entries | none |
+| `--tika-url` | Optional Apache Tika server URL for fallback extraction | `TIKA_URL` |
+| `--disable-tika` | Disable Apache Tika fallback even when `TIKA_URL` is set | `false` |
 
 ### Examples
 

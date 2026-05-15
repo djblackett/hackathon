@@ -1,12 +1,14 @@
 package extractors
 
 import (
+	"context"
 	"fmt"
 	"io/fs"
 	"path/filepath"
 	"strings"
 
 	"github.com/djblackett/bootdev-hackathon/internal/filetype"
+	"github.com/djblackett/bootdev-hackathon/internal/tika"
 )
 
 type Extractor interface {
@@ -15,8 +17,22 @@ type Extractor interface {
 }
 
 var registered []Extractor
+var tikaClient *tika.Client
 
 func Register(e Extractor) { registered = append(registered, e) }
+
+func ConfigureTika(baseURL string) error {
+	if strings.TrimSpace(baseURL) == "" {
+		tikaClient = nil
+		return nil
+	}
+	client, err := tika.NewClient(baseURL)
+	if err != nil {
+		return err
+	}
+	tikaClient = client
+	return nil
+}
 
 // Walk over dir; for each supported file call fn(path, content)
 func Walk(dir string, types map[string]struct{}, fn func(string, string) error) error {
@@ -68,6 +84,9 @@ func WalkInfo(dir string, types map[string]struct{}, fn func(ExtractedFileInfo) 
 					return err
 				}
 				applyDetection(&info, detection)
+				if shouldTryTikaFallback(info) {
+					info = mergeTikaFallback(info)
+				}
 				return fn(info)
 			}
 
@@ -77,7 +96,15 @@ func WalkInfo(dir string, types map[string]struct{}, fn func(ExtractedFileInfo) 
 			}
 			info := NewExtractedFileInfo(path, detection.Type, content)
 			applyDetection(&info, detection)
+			if shouldTryTikaFallback(info) {
+				info = mergeTikaFallback(info)
+			}
 			return fn(info)
+		}
+		if tikaClient != nil {
+			info := NewExtractedFileInfo(path, detection.Type, "")
+			applyDetection(&info, detection)
+			return fn(mergeTikaFallback(info))
 		}
 		return nil
 	})
@@ -95,6 +122,9 @@ func ExtractInfoForPath(path string) (ExtractedFileInfo, error) {
 				return ExtractedFileInfo{}, err
 			}
 			applyDetection(&info, detection)
+			if shouldTryTikaFallback(info) {
+				info = mergeTikaFallback(info)
+			}
 			return info, nil
 		}
 		content, err := ex.Extract(path)
@@ -103,7 +133,15 @@ func ExtractInfoForPath(path string) (ExtractedFileInfo, error) {
 		}
 		info := NewExtractedFileInfo(path, detection.Type, content)
 		applyDetection(&info, detection)
+		if shouldTryTikaFallback(info) {
+			info = mergeTikaFallback(info)
+		}
 		return info, nil
+	}
+	if tikaClient != nil {
+		info := NewExtractedFileInfo(path, detection.Type, "")
+		applyDetection(&info, detection)
+		return mergeTikaFallback(info), nil
 	}
 	return ExtractedFileInfo{}, fmt.Errorf("no extractor for %s", path)
 }
@@ -144,4 +182,79 @@ func applyDetection(info *ExtractedFileInfo, detection filetype.Detection) {
 	if detection.Warning != "" {
 		info.Warnings = append(info.Warnings, detection.Warning)
 	}
+}
+
+func shouldTryTikaFallback(info ExtractedFileInfo) bool {
+	return tikaClient != nil && strings.TrimSpace(info.RawContent) == "" && len(info.TextSamples) == 0
+}
+
+func mergeTikaFallback(info ExtractedFileInfo) ExtractedFileInfo {
+	if tikaClient == nil {
+		return info
+	}
+
+	extracted, err := tikaClient.ExtractFile(context.Background(), info.Path)
+	if err != nil {
+		info.Warnings = append(info.Warnings, "tika extraction failed: "+err.Error())
+		return info
+	}
+	info.Warnings = append(info.Warnings, extracted.Warnings...)
+
+	text := strings.TrimSpace(extracted.Text)
+	if info.RawContent == "" {
+		info.RawContent = text
+	}
+	for key, value := range extracted.Metadata {
+		if strings.TrimSpace(value) == "" {
+			continue
+		}
+		info.Metadata["tika:"+key] = value
+	}
+	appendTikaMetadataSample := func(keys []string, source string, score float64) {
+		for _, key := range keys {
+			if value := firstMetadataValue(extracted.Metadata, key); value != "" {
+				info.TextSamples = append(info.TextSamples, TextSample{Source: source, Text: value, Score: score})
+				return
+			}
+		}
+	}
+
+	appendTikaMetadataSample([]string{"title", "dc:title", "pdf:docinfo:title", "resourceName"}, "tika-title", 0.86)
+	appendTikaMetadataSample([]string{"subject", "dc:subject", "description", "dc:description"}, "tika-subject", 0.78)
+	appendTikaMetadataSample([]string{"creator", "dc:creator", "author", "meta:author"}, "tika-author", 0.62)
+
+	if text != "" {
+		if first := firstMeaningfulLine(text); first != "" {
+			info.TextSamples = append(info.TextSamples, TextSample{
+				Source: "tika-first-text",
+				Text:   first,
+				Score:  0.62,
+			})
+		}
+	}
+	if len(info.TextSamples) == 0 {
+		info.Warnings = append(info.Warnings, "tika returned no text or metadata")
+	}
+	return info
+}
+
+func firstMetadataValue(metadata map[string]string, keys ...string) string {
+	for _, want := range keys {
+		for key, value := range metadata {
+			if strings.EqualFold(key, want) && strings.TrimSpace(value) != "" {
+				return strings.TrimSpace(value)
+			}
+		}
+	}
+	return ""
+}
+
+func firstMeaningfulLine(text string) string {
+	for _, line := range strings.Split(text, "\n") {
+		line = strings.Join(strings.Fields(line), " ")
+		if line != "" {
+			return line
+		}
+	}
+	return ""
 }
