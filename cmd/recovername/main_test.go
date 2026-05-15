@@ -4,6 +4,9 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
+
+	"github.com/djblackett/bootdev-hackathon/internal/app"
 )
 
 func TestScanAcceptsFlagsAfterDirectory(t *testing.T) {
@@ -18,5 +21,23 @@ func TestScanAcceptsFlagsAfterDirectory(t *testing.T) {
 	}
 	if _, err := os.Stat(out); err != nil {
 		t.Fatalf("expected plan at trailing --out path: %v", err)
+	}
+}
+
+func TestApplyTrailingScanFlagsAcceptsSiegfried(t *testing.T) {
+	cfg := app.ScanConfig{}
+
+	err := applyTrailingScanFlags([]string{"--siegfried", "--siegfried-timeout", "3s", "--hash=false"}, &cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.UseSiegfried {
+		t.Fatal("UseSiegfried = false, want true")
+	}
+	if cfg.SiegfriedTimeout != 3*time.Second {
+		t.Fatalf("SiegfriedTimeout = %s, want 3s", cfg.SiegfriedTimeout)
+	}
+	if cfg.Hash {
+		t.Fatal("Hash = true, want false")
 	}
 }

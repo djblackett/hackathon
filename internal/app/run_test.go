@@ -18,6 +18,7 @@ import (
 	"github.com/djblackett/bootdev-hackathon/internal/evidence"
 	"github.com/djblackett/bootdev-hackathon/internal/plan"
 	"github.com/djblackett/bootdev-hackathon/internal/tika"
+	"github.com/djblackett/bootdev-hackathon/internal/tools"
 )
 
 func TestScanWritesDeterministicPlanWithoutTimestamp(t *testing.T) {
@@ -157,6 +158,36 @@ func TestScanMissingTikaServerAddsWarning(t *testing.T) {
 	}
 }
 
+func TestScanMissingSiegfriedAddsWarning(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "note.txt"), []byte("Quarterly revenue review"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := Scan(context.Background(), ScanConfig{
+		Root:         root,
+		OutPath:      filepath.Join(t.TempDir(), "plan.json"),
+		UseSiegfried: true,
+		Hash:         false,
+		NoTimestamp:  true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Items) != 1 {
+		t.Fatalf("items = %d, want 1", len(got.Items))
+	}
+	found := false
+	for _, warning := range got.Items[0].Warnings {
+		if strings.Contains(warning, "siegfried unavailable") {
+			found = true
+		}
+	}
+	if !found && !siegfriedInstalled() {
+		t.Fatalf("missing siegfried unavailable warning: %+v", got.Items[0].Warnings)
+	}
+}
+
 func TestScanRecordsBadFileWithoutFailingBatch(t *testing.T) {
 	root := t.TempDir()
 	if err := os.WriteFile(filepath.Join(root, "good.txt"), []byte("Quarterly revenue review"), 0644); err != nil {
@@ -275,6 +306,10 @@ func containsSource(sources []evidence.EvidenceSource, want string) bool {
 		}
 	}
 	return false
+}
+
+func siegfriedInstalled() bool {
+	return tools.Available("sf")
 }
 
 func writePNG(t *testing.T, path string) {

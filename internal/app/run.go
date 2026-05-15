@@ -13,6 +13,7 @@ import (
 
 	"github.com/djblackett/bootdev-hackathon/internal/evidence"
 	"github.com/djblackett/bootdev-hackathon/internal/extractors/native"
+	"github.com/djblackett/bootdev-hackathon/internal/extractors/siegfried"
 	"github.com/djblackett/bootdev-hackathon/internal/extractors/tikaextractor"
 	"github.com/djblackett/bootdev-hackathon/internal/plan"
 	"github.com/djblackett/bootdev-hackathon/internal/tika"
@@ -29,6 +30,9 @@ func Scan(ctx context.Context, cfg ScanConfig) (plan.Plan, error) {
 	if cfg.TikaTimeout <= 0 {
 		cfg.TikaTimeout = 30 * time.Second
 	}
+	if cfg.SiegfriedTimeout <= 0 {
+		cfg.SiegfriedTimeout = 10 * time.Second
+	}
 	if cfg.MaxTextPreview <= 0 {
 		cfg.MaxTextPreview = 2000
 	}
@@ -39,6 +43,11 @@ func Scan(ctx context.Context, cfg ScanConfig) (plan.Plan, error) {
 	}
 
 	nativeExtractor := native.Extractor{MaxTextPreview: cfg.MaxTextPreview}
+	siegfriedExtractor := siegfried.Extractor{Timeout: cfg.SiegfriedTimeout}
+	siegfriedUnavailableWarning := ""
+	if cfg.UseSiegfried && !siegfriedExtractor.Available(ctx) {
+		siegfriedUnavailableWarning = "siegfried unavailable; extraction skipped"
+	}
 	var tikaExtractor *tikaextractor.Extractor
 	tikaUnavailableWarning := ""
 	if !cfg.NoTika && (cfg.TikaURL != "" || cfg.TikaClient != nil) {
@@ -80,11 +89,25 @@ func Scan(ctx context.Context, cfg ScanConfig) (plan.Plan, error) {
 		if tikaUnavailableWarning != "" {
 			ev.Warnings = append(ev.Warnings, tikaUnavailableWarning)
 		}
+		if siegfriedUnavailableWarning != "" {
+			ev.Warnings = append(ev.Warnings, siegfriedUnavailableWarning)
+		}
 
 		if nativeExtractor.Available(ctx) {
 			partial, err := nativeExtractor.Extract(ctx, path)
 			if err != nil {
 				ev.Errors = append(ev.Errors, evidence.ToolError{Source: evidence.SourceNativeMIME, Message: err.Error()})
+			} else {
+				ev = evidence.Merge(ev, partial)
+			}
+		}
+
+		if cfg.UseSiegfried && siegfriedUnavailableWarning == "" {
+			extractCtx, cancel := context.WithTimeout(ctx, cfg.SiegfriedTimeout)
+			partial, err := siegfriedExtractor.Extract(extractCtx, path)
+			cancel()
+			if err != nil {
+				ev.Errors = append(ev.Errors, evidence.ToolError{Source: evidence.SourceSiegfried, Message: err.Error()})
 			} else {
 				ev = evidence.Merge(ev, partial)
 			}

@@ -135,6 +135,17 @@ go run ./cmd/recovername scan ./recovered \
 
 Use `--require-tika` only when a missing Tika server should fail the whole scan. Otherwise Tika failures are recorded as per-file warnings and the plan is still written.
 
+Siegfried can be enabled as an optional format-identification evidence provider:
+
+```bash
+go run ./cmd/recovername scan ./recovered \
+  --out rename-plan.json \
+  --siegfried \
+  --siegfried-timeout 10s
+```
+
+If `sf` is not installed, the scan still completes and records a warning in the plan.
+
 ### 2. Choose Your Backend
 
 #### Option A: Remote Server

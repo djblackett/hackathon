@@ -53,6 +53,15 @@ func runApp(args []string) error {
 						Usage: "timeout for Tika health and extraction requests",
 					},
 					&cli.BoolFlag{
+						Name:  "siegfried",
+						Usage: "run Siegfried format identification when sf is available",
+					},
+					&cli.DurationFlag{
+						Name:  "siegfried-timeout",
+						Value: 10 * time.Second,
+						Usage: "timeout for Siegfried format identification",
+					},
+					&cli.BoolFlag{
 						Name:  "hash",
 						Value: true,
 						Usage: "compute SHA-256 hashes",
@@ -73,15 +82,17 @@ func runApp(args []string) error {
 						return fmt.Errorf("scan requires a directory")
 					}
 					cfg := app.ScanConfig{
-						Root:           root,
-						OutPath:        c.String("out"),
-						TikaURL:        c.String("tika-url"),
-						NoTika:         c.Bool("no-tika"),
-						RequireTika:    c.Bool("require-tika"),
-						TikaTimeout:    c.Duration("tika-timeout"),
-						Hash:           c.Bool("hash"),
-						MaxTextPreview: c.Int("max-text-preview"),
-						NoTimestamp:    c.Bool("no-timestamp"),
+						Root:             root,
+						OutPath:          c.String("out"),
+						TikaURL:          c.String("tika-url"),
+						NoTika:           c.Bool("no-tika"),
+						RequireTika:      c.Bool("require-tika"),
+						TikaTimeout:      c.Duration("tika-timeout"),
+						UseSiegfried:     c.Bool("siegfried"),
+						SiegfriedTimeout: c.Duration("siegfried-timeout"),
+						Hash:             c.Bool("hash"),
+						MaxTextPreview:   c.Int("max-text-preview"),
+						NoTimestamp:      c.Bool("no-timestamp"),
 					}
 					if err := applyTrailingScanFlags(c.Args().Slice()[1:], &cfg); err != nil {
 						return err
@@ -131,6 +142,22 @@ func applyTrailingScanFlags(args []string, cfg *app.ScanConfig) error {
 				return err
 			}
 			cfg.TikaTimeout = duration
+		case arg == "--siegfried-timeout":
+			i++
+			if i >= len(args) {
+				return fmt.Errorf("--siegfried-timeout requires a value")
+			}
+			duration, err := time.ParseDuration(args[i])
+			if err != nil {
+				return err
+			}
+			cfg.SiegfriedTimeout = duration
+		case strings.HasPrefix(arg, "--siegfried-timeout="):
+			duration, err := time.ParseDuration(strings.TrimPrefix(arg, "--siegfried-timeout="))
+			if err != nil {
+				return err
+			}
+			cfg.SiegfriedTimeout = duration
 		case arg == "--max-text-preview":
 			i++
 			if i >= len(args) {
@@ -151,6 +178,8 @@ func applyTrailingScanFlags(args []string, cfg *app.ScanConfig) error {
 			cfg.NoTika = true
 		case arg == "--require-tika":
 			cfg.RequireTika = true
+		case arg == "--siegfried":
+			cfg.UseSiegfried = true
 		case arg == "--no-timestamp":
 			cfg.NoTimestamp = true
 		case arg == "--hash":
