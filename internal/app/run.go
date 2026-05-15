@@ -9,9 +9,11 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/djblackett/bootdev-hackathon/internal/evidence"
+	"github.com/djblackett/bootdev-hackathon/internal/extractors/exiftool"
 	"github.com/djblackett/bootdev-hackathon/internal/extractors/native"
 	"github.com/djblackett/bootdev-hackathon/internal/extractors/siegfried"
 	"github.com/djblackett/bootdev-hackathon/internal/extractors/tikaextractor"
@@ -30,6 +32,9 @@ func Scan(ctx context.Context, cfg ScanConfig) (plan.Plan, error) {
 	if cfg.TikaTimeout <= 0 {
 		cfg.TikaTimeout = 30 * time.Second
 	}
+	if cfg.ExifToolTimeout <= 0 {
+		cfg.ExifToolTimeout = 15 * time.Second
+	}
 	if cfg.SiegfriedTimeout <= 0 {
 		cfg.SiegfriedTimeout = 10 * time.Second
 	}
@@ -43,6 +48,8 @@ func Scan(ctx context.Context, cfg ScanConfig) (plan.Plan, error) {
 	}
 
 	nativeExtractor := native.Extractor{MaxTextPreview: cfg.MaxTextPreview}
+	exifToolExtractor := exiftool.Extractor{Timeout: cfg.ExifToolTimeout}
+	exifToolUnavailable := cfg.UseExifTool && !exifToolExtractor.Available(ctx)
 	siegfriedExtractor := siegfried.Extractor{Timeout: cfg.SiegfriedTimeout}
 	siegfriedUnavailableWarning := ""
 	if cfg.UseSiegfried && !siegfriedExtractor.Available(ctx) {
@@ -113,6 +120,21 @@ func Scan(ctx context.Context, cfg ScanConfig) (plan.Plan, error) {
 			}
 		}
 
+		if cfg.UseExifTool && shouldRunExifTool(ev) {
+			if exifToolUnavailable {
+				ev.Warnings = append(ev.Warnings, "exiftool unavailable; extraction skipped")
+			} else {
+				extractCtx, cancel := context.WithTimeout(ctx, cfg.ExifToolTimeout)
+				partial, err := exifToolExtractor.Extract(extractCtx, path)
+				cancel()
+				if err != nil {
+					ev.Errors = append(ev.Errors, evidence.ToolError{Source: evidence.SourceExifTool, Message: err.Error()})
+				} else {
+					ev = evidence.Merge(ev, partial)
+				}
+			}
+		}
+
 		if tikaExtractor != nil {
 			extractCtx, cancel := context.WithTimeout(ctx, cfg.TikaTimeout)
 			partial, err := tikaExtractor.Extract(extractCtx, path)
@@ -166,4 +188,18 @@ func sha256File(path string) (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+func shouldRunExifTool(ev evidence.FileEvidence) bool {
+	mime := strings.ToLower(ev.DetectedMIME)
+	ext := strings.ToLower(ev.Extension)
+	if strings.HasPrefix(mime, "image/") || strings.HasPrefix(mime, "audio/") || strings.HasPrefix(mime, "video/") {
+		return true
+	}
+	switch ext {
+	case ".jpg", ".jpeg", ".png", ".gif", ".tif", ".tiff", ".heic", ".mp3", ".m4a", ".wav", ".flac", ".mp4", ".mov", ".mkv", ".avi":
+		return true
+	default:
+		return false
+	}
 }

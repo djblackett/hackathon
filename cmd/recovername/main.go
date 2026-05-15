@@ -53,6 +53,15 @@ func runApp(args []string) error {
 						Usage: "timeout for Tika health and extraction requests",
 					},
 					&cli.BoolFlag{
+						Name:  "exiftool",
+						Usage: "run ExifTool metadata extraction for image/media-like files when available",
+					},
+					&cli.DurationFlag{
+						Name:  "exiftool-timeout",
+						Value: 15 * time.Second,
+						Usage: "timeout for ExifTool metadata extraction",
+					},
+					&cli.BoolFlag{
 						Name:  "siegfried",
 						Usage: "run Siegfried format identification when sf is available",
 					},
@@ -88,6 +97,8 @@ func runApp(args []string) error {
 						NoTika:           c.Bool("no-tika"),
 						RequireTika:      c.Bool("require-tika"),
 						TikaTimeout:      c.Duration("tika-timeout"),
+						UseExifTool:      c.Bool("exiftool"),
+						ExifToolTimeout:  c.Duration("exiftool-timeout"),
 						UseSiegfried:     c.Bool("siegfried"),
 						SiegfriedTimeout: c.Duration("siegfried-timeout"),
 						Hash:             c.Bool("hash"),
@@ -142,6 +153,22 @@ func applyTrailingScanFlags(args []string, cfg *app.ScanConfig) error {
 				return err
 			}
 			cfg.TikaTimeout = duration
+		case arg == "--exiftool-timeout":
+			i++
+			if i >= len(args) {
+				return fmt.Errorf("--exiftool-timeout requires a value")
+			}
+			duration, err := time.ParseDuration(args[i])
+			if err != nil {
+				return err
+			}
+			cfg.ExifToolTimeout = duration
+		case strings.HasPrefix(arg, "--exiftool-timeout="):
+			duration, err := time.ParseDuration(strings.TrimPrefix(arg, "--exiftool-timeout="))
+			if err != nil {
+				return err
+			}
+			cfg.ExifToolTimeout = duration
 		case arg == "--siegfried-timeout":
 			i++
 			if i >= len(args) {
@@ -178,6 +205,8 @@ func applyTrailingScanFlags(args []string, cfg *app.ScanConfig) error {
 			cfg.NoTika = true
 		case arg == "--require-tika":
 			cfg.RequireTika = true
+		case arg == "--exiftool":
+			cfg.UseExifTool = true
 		case arg == "--siegfried":
 			cfg.UseSiegfried = true
 		case arg == "--no-timestamp":

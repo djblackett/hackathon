@@ -14,6 +14,8 @@ type ScanConfig struct {
 	NoTika           bool
 	RequireTika      bool
 	TikaTimeout      time.Duration
+	UseExifTool      bool
+	ExifToolTimeout  time.Duration
 	UseSiegfried     bool
 	SiegfriedTimeout time.Duration
 	Hash             bool

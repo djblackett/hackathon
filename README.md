@@ -146,6 +146,17 @@ go run ./cmd/recovername scan ./recovered \
 
 If `sf` is not installed, the scan still completes and records a warning in the plan.
 
+ExifTool can be enabled for image/media metadata evidence:
+
+```bash
+go run ./cmd/recovername scan ./recovered \
+  --out rename-plan.json \
+  --exiftool \
+  --exiftool-timeout 15s
+```
+
+ExifTool only runs for files that native detection identifies as image or media-like. If `exiftool` is not installed, the scan still completes and records warnings for those files.
+
 ### 2. Choose Your Backend
 
 #### Option A: Remote Server

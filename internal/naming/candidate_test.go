@@ -60,6 +60,27 @@ func TestGenerateRejectsRandomTextSignal(t *testing.T) {
 	}
 }
 
+func TestGenerateUsesImageTimestampAndCameraEvidence(t *testing.T) {
+	got := Generate(evidence.FileEvidence{
+		Path:         "recovered/photo",
+		DetectedMIME: "image/jpeg",
+		Extension:    ".jpg",
+		Image: &evidence.ImageEvidence{
+			TakenAt:     "2021:08:14 16:22:09",
+			CameraMake:  "Apple",
+			CameraModel: "iPhone 12",
+		},
+		Sources: []evidence.EvidenceSource{evidence.SourceNativeMIME, evidence.SourceExifTool},
+	}, 3)
+
+	if got.Filename != "2021-08-14_16-22-09_apple-iphone-12.jpg" {
+		t.Fatalf("Filename = %q", got.Filename)
+	}
+	if got.Confidence != ConfidenceMedium {
+		t.Fatalf("Confidence = %q, want medium", got.Confidence)
+	}
+}
+
 func TestIsGenericTitle(t *testing.T) {
 	for _, value := range []string{"untitled", "Document1", "Microsoft Word - Document", "scan 0001"} {
 		if !IsGenericTitle(value) {

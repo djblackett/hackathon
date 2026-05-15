@@ -27,7 +27,7 @@ func TestScanAcceptsFlagsAfterDirectory(t *testing.T) {
 func TestApplyTrailingScanFlagsAcceptsSiegfried(t *testing.T) {
 	cfg := app.ScanConfig{}
 
-	err := applyTrailingScanFlags([]string{"--siegfried", "--siegfried-timeout", "3s", "--hash=false"}, &cfg)
+	err := applyTrailingScanFlags([]string{"--siegfried", "--siegfried-timeout", "3s", "--exiftool", "--exiftool-timeout=4s", "--hash=false"}, &cfg)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,6 +36,12 @@ func TestApplyTrailingScanFlagsAcceptsSiegfried(t *testing.T) {
 	}
 	if cfg.SiegfriedTimeout != 3*time.Second {
 		t.Fatalf("SiegfriedTimeout = %s, want 3s", cfg.SiegfriedTimeout)
+	}
+	if !cfg.UseExifTool {
+		t.Fatal("UseExifTool = false, want true")
+	}
+	if cfg.ExifToolTimeout != 4*time.Second {
+		t.Fatalf("ExifToolTimeout = %s, want 4s", cfg.ExifToolTimeout)
 	}
 	if cfg.Hash {
 		t.Fatal("Hash = true, want false")
