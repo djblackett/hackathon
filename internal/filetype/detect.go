@@ -3,6 +3,7 @@ package filetype
 import (
 	"archive/zip"
 	"bytes"
+	"compress/gzip"
 	"encoding/csv"
 	"encoding/json"
 	"io"
@@ -52,6 +53,10 @@ func Detect(path string) Detection {
 		detection.Type = "image"
 	case bytes.HasPrefix(sample, []byte("PK\x03\x04")):
 		detection.Type, detection.Subtype = detectZipContainer(path)
+	case isTarSignature(sample):
+		detection.Type, detection.Subtype = "archive", "tar"
+	case isGzipSignature(sample):
+		detection.Type, detection.Subtype = detectGzipContainer(path, ext)
 	default:
 		detection.Type, detection.Subtype = detectTextLike(sample, ext)
 	}
@@ -72,6 +77,18 @@ func detectZipContainer(path string) (string, string) {
 	for _, file := range zr.File {
 		name := strings.ToLower(file.Name)
 		switch {
+		case name == "mimetype" && readZipEntry(zr.File, file.Name) == "application/epub+zip":
+			return "epub", ""
+		case name == "mimetype":
+			if subtype := openDocumentSubtype(readZipEntry(zr.File, file.Name)); subtype != "" {
+				return "opendocument", subtype
+			}
+		case name == "meta-inf/container.xml":
+			return "epub", ""
+		case name == "content.xml" || name == "meta.xml":
+			if subtype := openDocumentSubtypeByExtension(path); subtype != "" {
+				return "opendocument", subtype
+			}
 		case name == "word/document.xml":
 			return "office", "docx"
 		case name == "xl/workbook.xml":
@@ -81,7 +98,29 @@ func detectZipContainer(path string) (string, string) {
 		}
 	}
 
-	return "zip", ""
+	return "archive", "zip"
+}
+
+func detectGzipContainer(path, ext string) (string, string) {
+	if ext == "tgz" || strings.HasSuffix(strings.ToLower(path), ".tar.gz") {
+		return "archive", "tar.gz"
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		return "unknown", ""
+	}
+	defer f.Close()
+	gr, err := gzip.NewReader(f)
+	if err != nil {
+		return "unknown", ""
+	}
+	defer gr.Close()
+	header := make([]byte, 512)
+	n, _ := io.ReadFull(gr, header)
+	if n >= 265 && isTarSignature(header[:n]) {
+		return "archive", "tar.gz"
+	}
+	return "unknown", ""
 }
 
 func detectTextLike(sample []byte, ext string) (string, string) {
@@ -152,6 +191,12 @@ func extensionFallback(ext string) string {
 		return "notebook"
 	case "rtf":
 		return "rtf"
+	case "epub":
+		return "epub"
+	case "odt", "ods", "odp":
+		return "opendocument"
+	case "zip", "tar", "tgz", "gz":
+		return "archive"
 	case "jpg", "jpeg", "png", "gif":
 		return "image"
 	case "mp3", "mp4", "m4a", "mov", "wav", "flac", "mkv", "avi":
@@ -169,6 +214,8 @@ func binaryExtensionFallback(ext string) string {
 		return "media"
 	case "docx", "xlsx", "pptx":
 		return "office"
+	case "zip", "tar", "tgz", "gz":
+		return "archive"
 	case "jpg", "jpeg", "png", "gif":
 		return "image"
 	default:
@@ -255,6 +302,55 @@ func isImageSignature(sample []byte) bool {
 		bytes.HasPrefix(sample, []byte("GIF89a"))
 }
 
+func isTarSignature(sample []byte) bool {
+	return len(sample) >= 265 && string(sample[257:262]) == "ustar"
+}
+
+func isGzipSignature(sample []byte) bool {
+	return bytes.HasPrefix(sample, []byte{0x1f, 0x8b})
+}
+
+func readZipEntry(files []*zip.File, name string) string {
+	for _, file := range files {
+		if file.Name != name {
+			continue
+		}
+		rc, err := file.Open()
+		if err != nil {
+			return ""
+		}
+		defer rc.Close()
+		b, err := io.ReadAll(rc)
+		if err != nil {
+			return ""
+		}
+		return strings.TrimSpace(string(b))
+	}
+	return ""
+}
+
+func openDocumentSubtype(mimetype string) string {
+	switch strings.TrimSpace(mimetype) {
+	case "application/vnd.oasis.opendocument.text":
+		return "odt"
+	case "application/vnd.oasis.opendocument.spreadsheet":
+		return "ods"
+	case "application/vnd.oasis.opendocument.presentation":
+		return "odp"
+	default:
+		return ""
+	}
+}
+
+func openDocumentSubtypeByExtension(path string) string {
+	switch strings.TrimPrefix(strings.ToLower(filepath.Ext(path)), ".") {
+	case "odt", "ods", "odp":
+		return strings.TrimPrefix(strings.ToLower(filepath.Ext(path)), ".")
+	default:
+		return "odt"
+	}
+}
+
 func canonicalExtension(detectedType, subtype, originalExt string) string {
 	switch detectedType {
 	case "pdf":
@@ -280,6 +376,21 @@ func canonicalExtension(detectedType, subtype, originalExt string) string {
 		return "ipynb"
 	case "rtf":
 		return "rtf"
+	case "epub":
+		return "epub"
+	case "opendocument":
+		return subtype
+	case "archive":
+		if subtype == "tar.gz" {
+			if originalExt == "tgz" {
+				return "tgz"
+			}
+			return "tar.gz"
+		}
+		if subtype != "" {
+			return subtype
+		}
+		return originalExt
 	case "image":
 		if originalExt == "jpg" || originalExt == "jpeg" || originalExt == "png" || originalExt == "gif" {
 			return originalExt

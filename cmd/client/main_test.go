@@ -1,6 +1,7 @@
 package main
 
 import (
+	"archive/zip"
 	"bytes"
 	"encoding/json"
 	"errors"
@@ -535,7 +536,7 @@ func TestClientDryRunReportInputCorpus(t *testing.T) {
 	}
 }
 
-func TestClientProcessesRTFAndNotebookByDefault(t *testing.T) {
+func TestClientProcessesAdditionalFormatsByDefault(t *testing.T) {
 	root := repoRoot(t)
 	inputDir := t.TempDir()
 	outputDir := t.TempDir()
@@ -554,6 +555,20 @@ func TestClientProcessesRTFAndNotebookByDefault(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(inputDir, "analysis.ipynb"), []byte(notebook), 0644); err != nil {
 		t.Fatal(err)
 	}
+	writeClientZip(t, filepath.Join(inputDir, "book.epub"), map[string]string{
+		"mimetype":               "application/epub+zip",
+		"META-INF/container.xml": `<container><rootfiles><rootfile full-path="OEBPS/content.opf"/></rootfiles></container>`,
+		"OEBPS/content.opf":      `<package><metadata><dc:title>Practical Canal Engineering</dc:title></metadata></package>`,
+	})
+	writeClientZip(t, filepath.Join(inputDir, "plan.odt"), map[string]string{
+		"mimetype":    "application/vnd.oasis.opendocument.text",
+		"meta.xml":    `<office:document-meta><office:meta><dc:title>Quarterly Planning Notes</dc:title></office:meta></office:document-meta>`,
+		"content.xml": `<office:document-content/>`,
+	})
+	writeClientZip(t, filepath.Join(inputDir, "bundle.zip"), map[string]string{
+		"customer-export/accounts.csv": "id,name",
+		"customer-export/orders.csv":   "id,total",
+	})
 
 	runClient(t, root,
 		"--strategy", "metadata-only",
@@ -567,6 +582,9 @@ func TestClientProcessesRTFAndNotebookByDefault(t *testing.T) {
 	bySource := entriesByBase(got)
 	assertSuggestedName(t, bySource, "notes.rtf", "project-launch.rtf")
 	assertSuggestedName(t, bySource, "analysis.ipynb", "revenue-forecast-analysis.ipynb")
+	assertSuggestedName(t, bySource, "book.epub", "practical-canal-engineering.epub")
+	assertSuggestedName(t, bySource, "plan.odt", "quarterly-planning.odt")
+	assertSuggestedName(t, bySource, "bundle.zip", "customer-export.zip")
 }
 
 func TestAutoFallbackUsesFakeAIForLowConfidenceOnly(t *testing.T) {
@@ -781,6 +799,31 @@ func repoRoot(t *testing.T) string {
 		t.Fatal("could not determine caller path")
 	}
 	return filepath.Clean(filepath.Join(filepath.Dir(file), "../.."))
+}
+
+func writeClientZip(t *testing.T, path string, files map[string]string) {
+	t.Helper()
+
+	out, err := os.Create(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	zw := zip.NewWriter(out)
+	for name, content := range files {
+		w, err := zw.Create(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := w.Write([]byte(content)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := zw.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := out.Close(); err != nil {
+		t.Fatal(err)
+	}
 }
 
 type fakeClient struct {

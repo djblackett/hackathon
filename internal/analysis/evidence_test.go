@@ -415,6 +415,57 @@ func TestGenerateFilenameUsesNotebookHeading(t *testing.T) {
 	}
 }
 
+func TestGenerateFilenameUsesEPUBTitle(t *testing.T) {
+	info := extractors.ExtractedFileInfo{
+		DetectedType:       "epub",
+		SuggestedExtension: "epub",
+		TextSamples: []extractors.TextSample{
+			{Source: "epub-title", Text: "Practical Canal Engineering", Score: 0.94},
+		},
+	}
+
+	got := GenerateFilename(info)
+
+	if got.Filename != "practical-canal-engineering" {
+		t.Fatalf("filename = %q", got.Filename)
+	}
+}
+
+func TestGenerateFilenameUsesOpenDocumentTitle(t *testing.T) {
+	info := extractors.ExtractedFileInfo{
+		DetectedType:       "opendocument",
+		SuggestedExtension: "odt",
+		TextSamples: []extractors.TextSample{
+			{Source: "opendocument-title", Text: "Quarterly Planning Notes", Score: 0.92},
+		},
+	}
+
+	got := GenerateFilename(info)
+
+	if got.Filename != "quarterly-planning" {
+		t.Fatalf("filename = %q", got.Filename)
+	}
+}
+
+func TestGenerateFilenameUsesArchiveContentsConservatively(t *testing.T) {
+	info := extractors.ExtractedFileInfo{
+		DetectedType:       "archive",
+		SuggestedExtension: "zip",
+		TextSamples: []extractors.TextSample{
+			{Source: "archive-contents", Text: "customer export", Score: 0.68},
+		},
+	}
+
+	got := GenerateFilename(info)
+
+	if got.Filename != "customer-export" {
+		t.Fatalf("filename = %q", got.Filename)
+	}
+	if got.Confidence >= 0.75 {
+		t.Fatalf("confidence = %.2f, want conservative archive confidence", got.Confidence)
+	}
+}
+
 func TestGenerateFilenameUsesMediaKindFallbacks(t *testing.T) {
 	cases := []struct {
 		ext  string

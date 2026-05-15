@@ -156,11 +156,76 @@ func TestDetectIPYNB(t *testing.T) {
 	}
 }
 
+func TestDetectEPUBContainer(t *testing.T) {
+	path := writeZipFile(t, "book.epub", map[string]string{
+		"mimetype":               "application/epub+zip",
+		"META-INF/container.xml": `<container/>`,
+	})
+
+	got := Detect(path)
+
+	if got.Type != "epub" || got.CanonicalExtension != "epub" {
+		t.Fatalf("got type=%q canonical=%q, want epub/epub", got.Type, got.CanonicalExtension)
+	}
+}
+
+func TestDetectOpenDocumentContainer(t *testing.T) {
+	path := writeZipFile(t, "sheet.ods", map[string]string{
+		"mimetype":    "application/vnd.oasis.opendocument.spreadsheet",
+		"content.xml": `<office:document-content/>`,
+	})
+
+	got := Detect(path)
+
+	if got.Type != "opendocument" || got.Subtype != "ods" || got.CanonicalExtension != "ods" {
+		t.Fatalf("got type=%q subtype=%q canonical=%q, want opendocument/ods/ods", got.Type, got.Subtype, got.CanonicalExtension)
+	}
+}
+
+func TestDetectGenericZipArchive(t *testing.T) {
+	path := writeZipFile(t, "bundle.zip", map[string]string{
+		"project/readme.txt": "hello",
+	})
+
+	got := Detect(path)
+
+	if got.Type != "archive" || got.Subtype != "zip" || got.CanonicalExtension != "zip" {
+		t.Fatalf("got type=%q subtype=%q canonical=%q, want archive/zip/zip", got.Type, got.Subtype, got.CanonicalExtension)
+	}
+}
+
 func writeTestFile(t *testing.T, name, content string) string {
 	t.Helper()
 
 	path := filepath.Join(t.TempDir(), name)
 	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+func writeZipFile(t *testing.T, name string, files map[string]string) string {
+	t.Helper()
+
+	path := filepath.Join(t.TempDir(), name)
+	out, err := os.Create(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	zw := zip.NewWriter(out)
+	for name, content := range files {
+		w, err := zw.Create(name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := w.Write([]byte(content)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := zw.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := out.Close(); err != nil {
 		t.Fatal(err)
 	}
 	return path
