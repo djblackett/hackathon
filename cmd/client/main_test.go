@@ -535,6 +535,40 @@ func TestClientDryRunReportInputCorpus(t *testing.T) {
 	}
 }
 
+func TestClientProcessesRTFAndNotebookByDefault(t *testing.T) {
+	root := repoRoot(t)
+	inputDir := t.TempDir()
+	outputDir := t.TempDir()
+	reportPath := filepath.Join(t.TempDir(), "report.json")
+	if err := os.WriteFile(filepath.Join(inputDir, "notes.rtf"), []byte(`{\rtf1\ansi Project Launch Notes\par First paragraph.}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	notebook := `{
+  "metadata": {"title": "Fallback Title"},
+  "nbformat": 4,
+  "nbformat_minor": 5,
+  "cells": [
+    {"cell_type": "markdown", "source": ["# Revenue Forecast Analysis\n", "Details"]}
+  ]
+}`
+	if err := os.WriteFile(filepath.Join(inputDir, "analysis.ipynb"), []byte(notebook), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	runClient(t, root,
+		"--strategy", "metadata-only",
+		"--dry-run",
+		"--input", inputDir,
+		"--output", outputDir,
+		"--report", reportPath,
+	)
+
+	got := readReport(t, reportPath)
+	bySource := entriesByBase(got)
+	assertSuggestedName(t, bySource, "notes.rtf", "project-launch.rtf")
+	assertSuggestedName(t, bySource, "analysis.ipynb", "revenue-forecast-analysis.ipynb")
+}
+
 func TestAutoFallbackUsesFakeAIForLowConfidenceOnly(t *testing.T) {
 	root := repoRoot(t)
 	outputDir := t.TempDir()

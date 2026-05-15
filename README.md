@@ -70,7 +70,7 @@ A web server that provides AI filename suggestion services via HTTP API, deploya
 
 ## Features
 
-- **Multi-format support:** Scans text, Markdown, CSV, PDF, JSON, HTML, XML, MusicXML, config/log files, Office documents, email files, image metadata, and media metadata.
+- **Multi-format support:** Scans text, Markdown, RTF, CSV, PDF, JSON, Jupyter notebooks, HTML, XML, MusicXML, config/log files, Office documents, email files, image metadata, and media metadata.
 - **Metadata-first naming:** Can rename many recovered files without AI by using internal metadata, headings, document properties, CSV headers, XML fields, and other local evidence.
 - **Wrong-extension recovery:** Detects common file types from content, so files such as extensionless PDFs or `.bin` JSON/XML files can still be processed.
 - **Flexible AI backends:** Supports direct OpenAI, local Ollama, and a remote Fly.io server.
@@ -152,7 +152,7 @@ go run ./cmd/client/main.go --input ./files/input --dry-run
 |------|-------------|---------|
 | `--input` | Directory to scan for files | `files/input` |
 | `--output` | Output directory for processed files | `files/output` |
-| `--types` | File extensions or detected content types to process (comma-separated) | `txt,text,md,markdown,csv,pdf,json,html,xml,musicxml,log,cfg,ini,docx,xlsx,pptx,office,eml,email,image,media` |
+| `--types` | File extensions or detected content types to process (comma-separated) | `txt,text,md,markdown,rtf,csv,pdf,json,ipynb,notebook,html,xml,musicxml,log,cfg,ini,docx,xlsx,pptx,office,eml,email,image,media` |
 | `--local` | Use local Ollama instead of OpenAI | `false` |
 | `--model` | AI model name | `gpt-3.5-turbo` (OpenAI) / `mistral` (Ollama) |
 | `--dry-run` | Preview changes without processing | `false` |

@@ -98,6 +98,10 @@ func detectTextLike(sample []byte, ext string) (string, string) {
 	switch {
 	case ext == "eml" || looksEmail(lower):
 		return "email", ""
+	case ext == "ipynb":
+		return "notebook", "ipynb"
+	case ext == "rtf" || looksRTF(lower):
+		return "rtf", ""
 	case json.Valid(trimmed):
 		return "json", ""
 	case looksHTML(lower):
@@ -122,6 +126,10 @@ func looksEmail(s string) bool {
 		(strings.Contains(s, "\nfrom:") || strings.Contains(s, "\nto:"))
 }
 
+func looksRTF(s string) bool {
+	return strings.HasPrefix(s, "{\\rtf")
+}
+
 func extensionFallback(ext string) string {
 	switch ext {
 	case "txt", "log", "cfg", "ini":
@@ -140,6 +148,10 @@ func extensionFallback(ext string) string {
 		return "pdf"
 	case "eml":
 		return "email"
+	case "ipynb":
+		return "notebook"
+	case "rtf":
+		return "rtf"
 	case "jpg", "jpeg", "png", "gif":
 		return "image"
 	case "mp3", "mp4", "m4a", "mov", "wav", "flac", "mkv", "avi":
@@ -264,6 +276,10 @@ func canonicalExtension(detectedType, subtype, originalExt string) string {
 		return subtype
 	case "email":
 		return "eml"
+	case "notebook":
+		return "ipynb"
+	case "rtf":
+		return "rtf"
 	case "image":
 		if originalExt == "jpg" || originalExt == "jpeg" || originalExt == "png" || originalExt == "gif" {
 			return originalExt

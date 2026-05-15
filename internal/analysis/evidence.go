@@ -54,7 +54,11 @@ func sourceWeight(source string) float64 {
 		return 0.97
 	case "html-title", "json-title-field", "office-title", "email-subject":
 		return 0.95
+	case "notebook-title":
+		return 0.88
 	case "musicxml-work-title":
+		return 0.94
+	case "notebook-heading":
 		return 0.94
 	case "musicxml-movement-title", "xml-title":
 		return 0.9
@@ -102,10 +106,14 @@ func sourceWeight(source string) float64 {
 		return 0.42
 	case "pdf-first-text":
 		return 0.72
+	case "notebook-markdown":
+		return 0.72
 	case "office-first-paragraph":
 		return 0.74
 	case "office-text":
 		return 0.68
+	case "rtf-heading":
+		return 0.86
 	case "text-summary":
 		return 0.72
 	case "short-text-note":

@@ -376,6 +376,45 @@ func TestGenerateFilenameUsesShortTextNoteAtMediumConfidence(t *testing.T) {
 	}
 }
 
+func TestGenerateFilenameUsesRTFHeading(t *testing.T) {
+	info := extractors.ExtractedFileInfo{
+		DetectedType:       "rtf",
+		SuggestedExtension: "rtf",
+		TextSamples: []extractors.TextSample{
+			{Source: "rtf-heading", Text: "Project Launch Notes", Score: 0.86},
+		},
+	}
+
+	got := GenerateFilename(info)
+
+	if got.Filename != "project-launch" {
+		t.Fatalf("filename = %q", got.Filename)
+	}
+	if got.Confidence < 0.85 {
+		t.Fatalf("confidence = %.2f, want high confidence", got.Confidence)
+	}
+}
+
+func TestGenerateFilenameUsesNotebookHeading(t *testing.T) {
+	info := extractors.ExtractedFileInfo{
+		DetectedType:       "notebook",
+		SuggestedExtension: "ipynb",
+		TextSamples: []extractors.TextSample{
+			{Source: "notebook-title", Text: "Fallback Notebook Title", Score: 0.92},
+			{Source: "notebook-heading", Text: "Revenue Forecast Analysis", Score: 0.9},
+		},
+	}
+
+	got := GenerateFilename(info)
+
+	if got.Filename != "revenue-forecast-analysis" {
+		t.Fatalf("filename = %q", got.Filename)
+	}
+	if got.Confidence < 0.9 {
+		t.Fatalf("confidence = %.2f, want high confidence", got.Confidence)
+	}
+}
+
 func TestGenerateFilenameUsesMediaKindFallbacks(t *testing.T) {
 	cases := []struct {
 		ext  string

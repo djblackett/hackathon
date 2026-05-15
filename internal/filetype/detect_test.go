@@ -136,6 +136,26 @@ func TestDetectMediaByExtension(t *testing.T) {
 	}
 }
 
+func TestDetectRTF(t *testing.T) {
+	path := writeTestFile(t, "recovered.bin", `{\rtf1\ansi Project Notes}`)
+
+	got := Detect(path)
+
+	if got.Type != "rtf" || got.CanonicalExtension != "rtf" {
+		t.Fatalf("got type=%q canonical=%q, want rtf/rtf", got.Type, got.CanonicalExtension)
+	}
+}
+
+func TestDetectIPYNB(t *testing.T) {
+	path := writeTestFile(t, "analysis.ipynb", `{"cells":[],"metadata":{},"nbformat":4,"nbformat_minor":5}`)
+
+	got := Detect(path)
+
+	if got.Type != "notebook" || got.Subtype != "ipynb" || got.CanonicalExtension != "ipynb" {
+		t.Fatalf("got type=%q subtype=%q canonical=%q, want notebook/ipynb/ipynb", got.Type, got.Subtype, got.CanonicalExtension)
+	}
+}
+
 func writeTestFile(t *testing.T, name, content string) string {
 	t.Helper()
 
