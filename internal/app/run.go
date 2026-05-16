@@ -15,6 +15,7 @@ import (
 	"github.com/djblackett/bootdev-hackathon/internal/evidence"
 	"github.com/djblackett/bootdev-hackathon/internal/extractors/exiftool"
 	"github.com/djblackett/bootdev-hackathon/internal/extractors/ffprobe"
+	"github.com/djblackett/bootdev-hackathon/internal/extractors/jhove"
 	"github.com/djblackett/bootdev-hackathon/internal/extractors/native"
 	"github.com/djblackett/bootdev-hackathon/internal/extractors/siegfried"
 	"github.com/djblackett/bootdev-hackathon/internal/extractors/tikaextractor"
@@ -39,6 +40,9 @@ func Scan(ctx context.Context, cfg ScanConfig) (plan.Plan, error) {
 	if cfg.FFProbeTimeout <= 0 {
 		cfg.FFProbeTimeout = 15 * time.Second
 	}
+	if cfg.JHOVETimeout <= 0 {
+		cfg.JHOVETimeout = 30 * time.Second
+	}
 	if cfg.SiegfriedTimeout <= 0 {
 		cfg.SiegfriedTimeout = 10 * time.Second
 	}
@@ -56,6 +60,11 @@ func Scan(ctx context.Context, cfg ScanConfig) (plan.Plan, error) {
 	exifToolUnavailable := cfg.UseExifTool && !exifToolExtractor.Available(ctx)
 	ffprobeExtractor := ffprobe.Extractor{Timeout: cfg.FFProbeTimeout}
 	ffprobeUnavailable := cfg.UseFFProbe && !ffprobeExtractor.Available(ctx)
+	jhoveExtractor := jhove.Extractor{Timeout: cfg.JHOVETimeout}
+	jhoveUnavailableWarning := ""
+	if cfg.Validate && !jhoveExtractor.Available(ctx) {
+		jhoveUnavailableWarning = "jhove unavailable; validation skipped"
+	}
 	siegfriedExtractor := siegfried.Extractor{Timeout: cfg.SiegfriedTimeout}
 	siegfriedUnavailableWarning := ""
 	if cfg.UseSiegfried && !siegfriedExtractor.Available(ctx) {
@@ -104,6 +113,9 @@ func Scan(ctx context.Context, cfg ScanConfig) (plan.Plan, error) {
 		}
 		if siegfriedUnavailableWarning != "" {
 			ev.Warnings = append(ev.Warnings, siegfriedUnavailableWarning)
+		}
+		if jhoveUnavailableWarning != "" {
+			ev.Warnings = append(ev.Warnings, jhoveUnavailableWarning)
 		}
 
 		if nativeExtractor.Available(ctx) {
@@ -162,6 +174,17 @@ func Scan(ctx context.Context, cfg ScanConfig) (plan.Plan, error) {
 			cancel()
 			if err != nil {
 				ev.Errors = append(ev.Errors, evidence.ToolError{Source: evidence.SourceTika, Message: err.Error()})
+			} else {
+				ev = evidence.Merge(ev, partial)
+			}
+		}
+
+		if cfg.Validate && jhoveUnavailableWarning == "" {
+			extractCtx, cancel := context.WithTimeout(ctx, cfg.JHOVETimeout)
+			partial, err := jhoveExtractor.Extract(extractCtx, path)
+			cancel()
+			if err != nil {
+				ev.Errors = append(ev.Errors, evidence.ToolError{Source: evidence.SourceJHOVE, Message: err.Error()})
 			} else {
 				ev = evidence.Merge(ev, partial)
 			}

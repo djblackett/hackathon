@@ -27,7 +27,7 @@ func TestScanAcceptsFlagsAfterDirectory(t *testing.T) {
 func TestApplyTrailingScanFlagsAcceptsSiegfried(t *testing.T) {
 	cfg := app.ScanConfig{}
 
-	err := applyTrailingScanFlags([]string{"--siegfried", "--siegfried-timeout", "3s", "--exiftool", "--exiftool-timeout=4s", "--ffprobe", "--ffprobe-timeout", "5s", "--hash=false"}, &cfg)
+	err := applyTrailingScanFlags([]string{"--siegfried", "--siegfried-timeout", "3s", "--exiftool", "--exiftool-timeout=4s", "--ffprobe", "--ffprobe-timeout", "5s", "--validate", "--jhove-timeout=6s", "--hash=false"}, &cfg)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,6 +48,12 @@ func TestApplyTrailingScanFlagsAcceptsSiegfried(t *testing.T) {
 	}
 	if cfg.FFProbeTimeout != 5*time.Second {
 		t.Fatalf("FFProbeTimeout = %s, want 5s", cfg.FFProbeTimeout)
+	}
+	if !cfg.Validate {
+		t.Fatal("Validate = false, want true")
+	}
+	if cfg.JHOVETimeout != 6*time.Second {
+		t.Fatalf("JHOVETimeout = %s, want 6s", cfg.JHOVETimeout)
 	}
 	if cfg.Hash {
 		t.Fatal("Hash = true, want false")

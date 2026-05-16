@@ -168,6 +168,17 @@ go run ./cmd/recovername scan ./recovered \
 
 ffprobe only runs for files that native detection identifies as audio/video-like. Tool failures are recorded per file and do not stop the batch.
 
+JHOVE validation can be enabled with:
+
+```bash
+go run ./cmd/recovername scan ./recovered \
+  --out rename-plan.json \
+  --validate \
+  --jhove-timeout 30s
+```
+
+JHOVE does not generate names. It only adds validation status and warnings to the evidence model.
+
 ### 2. Choose Your Backend
 
 #### Option A: Remote Server

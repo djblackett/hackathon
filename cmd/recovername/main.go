@@ -71,6 +71,15 @@ func runApp(args []string) error {
 						Usage: "timeout for ffprobe metadata extraction",
 					},
 					&cli.BoolFlag{
+						Name:  "validate",
+						Usage: "run JHOVE validation when available",
+					},
+					&cli.DurationFlag{
+						Name:  "jhove-timeout",
+						Value: 30 * time.Second,
+						Usage: "timeout for JHOVE validation",
+					},
+					&cli.BoolFlag{
 						Name:  "siegfried",
 						Usage: "run Siegfried format identification when sf is available",
 					},
@@ -110,6 +119,8 @@ func runApp(args []string) error {
 						ExifToolTimeout:  c.Duration("exiftool-timeout"),
 						UseFFProbe:       c.Bool("ffprobe"),
 						FFProbeTimeout:   c.Duration("ffprobe-timeout"),
+						Validate:         c.Bool("validate"),
+						JHOVETimeout:     c.Duration("jhove-timeout"),
 						UseSiegfried:     c.Bool("siegfried"),
 						SiegfriedTimeout: c.Duration("siegfried-timeout"),
 						Hash:             c.Bool("hash"),
@@ -196,6 +207,22 @@ func applyTrailingScanFlags(args []string, cfg *app.ScanConfig) error {
 				return err
 			}
 			cfg.FFProbeTimeout = duration
+		case arg == "--jhove-timeout":
+			i++
+			if i >= len(args) {
+				return fmt.Errorf("--jhove-timeout requires a value")
+			}
+			duration, err := time.ParseDuration(args[i])
+			if err != nil {
+				return err
+			}
+			cfg.JHOVETimeout = duration
+		case strings.HasPrefix(arg, "--jhove-timeout="):
+			duration, err := time.ParseDuration(strings.TrimPrefix(arg, "--jhove-timeout="))
+			if err != nil {
+				return err
+			}
+			cfg.JHOVETimeout = duration
 		case arg == "--siegfried-timeout":
 			i++
 			if i >= len(args) {
@@ -236,6 +263,8 @@ func applyTrailingScanFlags(args []string, cfg *app.ScanConfig) error {
 			cfg.UseExifTool = true
 		case arg == "--ffprobe":
 			cfg.UseFFProbe = true
+		case arg == "--validate":
+			cfg.Validate = true
 		case arg == "--siegfried":
 			cfg.UseSiegfried = true
 		case arg == "--no-timestamp":

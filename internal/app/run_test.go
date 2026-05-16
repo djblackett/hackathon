@@ -253,6 +253,36 @@ func TestScanMissingFFProbeAddsWarningForMedia(t *testing.T) {
 	}
 }
 
+func TestScanMissingJHOVEAddsValidationWarning(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "note.txt"), []byte("Quarterly revenue review"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := Scan(context.Background(), ScanConfig{
+		Root:        root,
+		OutPath:     filepath.Join(t.TempDir(), "plan.json"),
+		Validate:    true,
+		Hash:        false,
+		NoTimestamp: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Items) != 1 {
+		t.Fatalf("items = %d, want 1", len(got.Items))
+	}
+	found := false
+	for _, warning := range got.Items[0].Warnings {
+		if strings.Contains(warning, "jhove unavailable") {
+			found = true
+		}
+	}
+	if !found && !jhoveInstalled() {
+		t.Fatalf("missing jhove unavailable warning: %+v", got.Items[0].Warnings)
+	}
+}
+
 func TestScanRecordsBadFileWithoutFailingBatch(t *testing.T) {
 	root := t.TempDir()
 	if err := os.WriteFile(filepath.Join(root, "good.txt"), []byte("Quarterly revenue review"), 0644); err != nil {
@@ -383,6 +413,10 @@ func exifToolInstalled() bool {
 
 func ffprobeInstalled() bool {
 	return tools.Available("ffprobe")
+}
+
+func jhoveInstalled() bool {
+	return tools.Available("jhove")
 }
 
 func writePNG(t *testing.T, path string) {

@@ -18,6 +18,8 @@ type ScanConfig struct {
 	ExifToolTimeout  time.Duration
 	UseFFProbe       bool
 	FFProbeTimeout   time.Duration
+	Validate         bool
+	JHOVETimeout     time.Duration
 	UseSiegfried     bool
 	SiegfriedTimeout time.Duration
 	Hash             bool
