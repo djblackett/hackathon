@@ -179,6 +179,18 @@ go run ./cmd/recovername scan ./recovered \
 
 JHOVE does not generate names. It only adds validation status and warnings to the evidence model.
 
+Tesseract OCR can be enabled for image-like recovered files:
+
+```bash
+go run ./cmd/recovername scan ./recovered \
+  --out rename-plan.json \
+  --ocr \
+  --ocr-lang eng \
+  --ocr-timeout 60s
+```
+
+OCR is disabled by default and is treated as cautious evidence because recognized text can be noisy. Missing or failing Tesseract is recorded per file and does not stop the batch.
+
 ### 2. Choose Your Backend
 
 #### Option A: Remote Server

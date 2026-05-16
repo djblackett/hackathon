@@ -20,6 +20,9 @@ type ScanConfig struct {
 	FFProbeTimeout   time.Duration
 	Validate         bool
 	JHOVETimeout     time.Duration
+	UseOCR           bool
+	OCRLang          string
+	OCRTimeout       time.Duration
 	UseSiegfried     bool
 	SiegfriedTimeout time.Duration
 	Hash             bool

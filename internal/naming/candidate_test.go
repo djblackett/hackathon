@@ -102,6 +102,24 @@ func TestGenerateUsesMediaTitleAndCreationDate(t *testing.T) {
 	}
 }
 
+func TestGenerateTreatsOCROnlySignalCautiously(t *testing.T) {
+	got := Generate(evidence.FileEvidence{
+		Path:         "recovered/scan.png",
+		DetectedMIME: "image/png",
+		Extension:    ".png",
+		Metadata:     map[string]string{"ocr": "true"},
+		TextSignals:  []string{"Nova Scotia Power Bill Amount Due"},
+		Sources:      []evidence.EvidenceSource{evidence.SourceNativeMIME, evidence.SourceTesseract},
+	}, 8)
+
+	if got.Filename != "nova-scotia-power-bill-amount-due.png" {
+		t.Fatalf("Filename = %q", got.Filename)
+	}
+	if got.Confidence != ConfidenceLow {
+		t.Fatalf("Confidence = %q, want low for OCR-only signal", got.Confidence)
+	}
+}
+
 func TestIsGenericTitle(t *testing.T) {
 	for _, value := range []string{"untitled", "Document1", "Microsoft Word - Document", "scan 0001"} {
 		if !IsGenericTitle(value) {

@@ -18,6 +18,7 @@ import (
 	"github.com/djblackett/bootdev-hackathon/internal/extractors/jhove"
 	"github.com/djblackett/bootdev-hackathon/internal/extractors/native"
 	"github.com/djblackett/bootdev-hackathon/internal/extractors/siegfried"
+	"github.com/djblackett/bootdev-hackathon/internal/extractors/tesseract"
 	"github.com/djblackett/bootdev-hackathon/internal/extractors/tikaextractor"
 	"github.com/djblackett/bootdev-hackathon/internal/plan"
 	"github.com/djblackett/bootdev-hackathon/internal/tika"
@@ -43,6 +44,12 @@ func Scan(ctx context.Context, cfg ScanConfig) (plan.Plan, error) {
 	if cfg.JHOVETimeout <= 0 {
 		cfg.JHOVETimeout = 30 * time.Second
 	}
+	if cfg.OCRTimeout <= 0 {
+		cfg.OCRTimeout = 60 * time.Second
+	}
+	if strings.TrimSpace(cfg.OCRLang) == "" {
+		cfg.OCRLang = "eng"
+	}
 	if cfg.SiegfriedTimeout <= 0 {
 		cfg.SiegfriedTimeout = 10 * time.Second
 	}
@@ -65,6 +72,8 @@ func Scan(ctx context.Context, cfg ScanConfig) (plan.Plan, error) {
 	if cfg.Validate && !jhoveExtractor.Available(ctx) {
 		jhoveUnavailableWarning = "jhove unavailable; validation skipped"
 	}
+	tesseractExtractor := tesseract.Extractor{Timeout: cfg.OCRTimeout, Lang: cfg.OCRLang, MaxTextPreview: cfg.MaxTextPreview}
+	tesseractUnavailable := cfg.UseOCR && !tesseractExtractor.Available(ctx)
 	siegfriedExtractor := siegfried.Extractor{Timeout: cfg.SiegfriedTimeout}
 	siegfriedUnavailableWarning := ""
 	if cfg.UseSiegfried && !siegfriedExtractor.Available(ctx) {
@@ -168,6 +177,21 @@ func Scan(ctx context.Context, cfg ScanConfig) (plan.Plan, error) {
 			}
 		}
 
+		if cfg.UseOCR && shouldRunOCR(ev) {
+			if tesseractUnavailable {
+				ev.Warnings = append(ev.Warnings, "tesseract unavailable; OCR skipped")
+			} else {
+				extractCtx, cancel := context.WithTimeout(ctx, cfg.OCRTimeout)
+				partial, err := tesseractExtractor.Extract(extractCtx, path)
+				cancel()
+				if err != nil {
+					ev.Errors = append(ev.Errors, evidence.ToolError{Source: evidence.SourceTesseract, Message: err.Error()})
+				} else {
+					ev = evidence.Merge(ev, partial)
+				}
+			}
+		}
+
 		if tikaExtractor != nil {
 			extractCtx, cancel := context.WithTimeout(ctx, cfg.TikaTimeout)
 			partial, err := tikaExtractor.Extract(extractCtx, path)
@@ -205,6 +229,20 @@ func Scan(ctx context.Context, cfg ScanConfig) (plan.Plan, error) {
 		return plan.Plan{}, err
 	}
 	return p, nil
+}
+
+func shouldRunOCR(ev evidence.FileEvidence) bool {
+	mime := strings.ToLower(ev.DetectedMIME)
+	ext := strings.ToLower(ev.Extension)
+	if strings.HasPrefix(mime, "image/") {
+		return true
+	}
+	switch ext {
+	case ".jpg", ".jpeg", ".png", ".gif", ".tif", ".tiff", ".heic":
+		return true
+	default:
+		return false
+	}
 }
 
 func shouldRunFFProbe(ev evidence.FileEvidence) bool {

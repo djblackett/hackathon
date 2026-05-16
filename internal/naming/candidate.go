@@ -97,9 +97,13 @@ func candidatesForEvidence(ev evidence.FileEvidence) []scoredCandidate {
 		})
 	}
 	if textSignal != "" {
+		score := 0.56
+		if ocrOnlySignal(ev) {
+			score = 0.48
+		}
 		out = append(out, scoredCandidate{
 			Base:    textSignal,
-			Score:   0.56,
+			Score:   score,
 			Reasons: []string{"extracted useful text signal"},
 		})
 	}
@@ -200,6 +204,19 @@ func scoreWithSourceBoost(score float64, ev evidence.FileEvidence) float64 {
 		return 0.95
 	}
 	return score
+}
+
+func ocrOnlySignal(ev evidence.FileEvidence) bool {
+	if !strings.EqualFold(ev.Metadata["ocr"], "true") {
+		return false
+	}
+	for _, source := range ev.Sources {
+		switch source {
+		case evidence.SourceTika, evidence.SourceExifTool, evidence.SourceFFProbe, evidence.SourceSiegfried:
+			return false
+		}
+	}
+	return true
 }
 
 func normalizeDate(value string) string {

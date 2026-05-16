@@ -283,6 +283,35 @@ func TestScanMissingJHOVEAddsValidationWarning(t *testing.T) {
 	}
 }
 
+func TestScanMissingTesseractAddsOCRWarningForImage(t *testing.T) {
+	root := t.TempDir()
+	writePNG(t, filepath.Join(root, "scan"))
+
+	got, err := Scan(context.Background(), ScanConfig{
+		Root:        root,
+		OutPath:     filepath.Join(t.TempDir(), "plan.json"),
+		UseOCR:      true,
+		OCRLang:     "eng",
+		Hash:        false,
+		NoTimestamp: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Items) != 1 {
+		t.Fatalf("items = %d, want 1", len(got.Items))
+	}
+	found := false
+	for _, warning := range got.Items[0].Warnings {
+		if strings.Contains(warning, "tesseract unavailable") {
+			found = true
+		}
+	}
+	if !found && !tesseractInstalled() {
+		t.Fatalf("missing tesseract unavailable warning: %+v", got.Items[0].Warnings)
+	}
+}
+
 func TestScanRecordsBadFileWithoutFailingBatch(t *testing.T) {
 	root := t.TempDir()
 	if err := os.WriteFile(filepath.Join(root, "good.txt"), []byte("Quarterly revenue review"), 0644); err != nil {
@@ -417,6 +446,10 @@ func ffprobeInstalled() bool {
 
 func jhoveInstalled() bool {
 	return tools.Available("jhove")
+}
+
+func tesseractInstalled() bool {
+	return tools.Available("tesseract")
 }
 
 func writePNG(t *testing.T, path string) {

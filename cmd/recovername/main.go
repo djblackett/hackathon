@@ -80,6 +80,20 @@ func runApp(args []string) error {
 						Usage: "timeout for JHOVE validation",
 					},
 					&cli.BoolFlag{
+						Name:  "ocr",
+						Usage: "run Tesseract OCR for image-like files when available",
+					},
+					&cli.StringFlag{
+						Name:  "ocr-lang",
+						Value: "eng",
+						Usage: "Tesseract OCR language",
+					},
+					&cli.DurationFlag{
+						Name:  "ocr-timeout",
+						Value: 60 * time.Second,
+						Usage: "timeout for Tesseract OCR",
+					},
+					&cli.BoolFlag{
 						Name:  "siegfried",
 						Usage: "run Siegfried format identification when sf is available",
 					},
@@ -121,6 +135,9 @@ func runApp(args []string) error {
 						FFProbeTimeout:   c.Duration("ffprobe-timeout"),
 						Validate:         c.Bool("validate"),
 						JHOVETimeout:     c.Duration("jhove-timeout"),
+						UseOCR:           c.Bool("ocr"),
+						OCRLang:          c.String("ocr-lang"),
+						OCRTimeout:       c.Duration("ocr-timeout"),
 						UseSiegfried:     c.Bool("siegfried"),
 						SiegfriedTimeout: c.Duration("siegfried-timeout"),
 						Hash:             c.Bool("hash"),
@@ -223,6 +240,30 @@ func applyTrailingScanFlags(args []string, cfg *app.ScanConfig) error {
 				return err
 			}
 			cfg.JHOVETimeout = duration
+		case arg == "--ocr-lang":
+			i++
+			if i >= len(args) {
+				return fmt.Errorf("--ocr-lang requires a value")
+			}
+			cfg.OCRLang = args[i]
+		case strings.HasPrefix(arg, "--ocr-lang="):
+			cfg.OCRLang = strings.TrimPrefix(arg, "--ocr-lang=")
+		case arg == "--ocr-timeout":
+			i++
+			if i >= len(args) {
+				return fmt.Errorf("--ocr-timeout requires a value")
+			}
+			duration, err := time.ParseDuration(args[i])
+			if err != nil {
+				return err
+			}
+			cfg.OCRTimeout = duration
+		case strings.HasPrefix(arg, "--ocr-timeout="):
+			duration, err := time.ParseDuration(strings.TrimPrefix(arg, "--ocr-timeout="))
+			if err != nil {
+				return err
+			}
+			cfg.OCRTimeout = duration
 		case arg == "--siegfried-timeout":
 			i++
 			if i >= len(args) {
@@ -265,6 +306,8 @@ func applyTrailingScanFlags(args []string, cfg *app.ScanConfig) error {
 			cfg.UseFFProbe = true
 		case arg == "--validate":
 			cfg.Validate = true
+		case arg == "--ocr":
+			cfg.UseOCR = true
 		case arg == "--siegfried":
 			cfg.UseSiegfried = true
 		case arg == "--no-timestamp":
