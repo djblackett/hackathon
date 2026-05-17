@@ -1,13 +1,13 @@
 {
   "summary": {
     "total_files": 17,
-    "planned_count": 15,
+    "planned_count": 16,
     "copied_count": 0,
-    "skipped_count": 2,
+    "skipped_count": 1,
     "low_confidence_count": 1,
     "ai_fallback_count": 0,
     "warnings_count": 1,
-    "pending_review_count": 2,
+    "pending_review_count": 1,
     "accepted_count": 0,
     "rejected_count": 0
   },
@@ -17,10 +17,11 @@
       "destination_path": "files/output/video-2026-01-22-00-59-57.mkv",
       "suggested_name": "video-2026-01-22-00-59-57.mkv",
       "method": "metadata",
-      "confidence": 0.8500000000000001,
+      "confidence": 0.85,
       "evidence": [
         "media-timestamp"
       ],
+      "reason": "generated from local file evidence",
       "dry_run": true
     },
     {
@@ -32,6 +33,7 @@
       "evidence": [
         "html-title"
       ],
+      "reason": "generated from local file evidence",
       "dry_run": true
     },
     {
@@ -39,10 +41,11 @@
       "destination_path": "files/output/retro-metro-mix-dec-28-01-start.wav",
       "suggested_name": "retro-metro-mix-dec-28-01-start.wav",
       "method": "metadata",
-      "confidence": 0.9299999999999999,
+      "confidence": 0.93,
       "evidence": [
         "media-filename"
       ],
+      "reason": "generated from local file evidence",
       "dry_run": true
     },
     {
@@ -54,6 +57,7 @@
       "evidence": [
         "media-filename"
       ],
+      "reason": "generated from local file evidence",
       "dry_run": true
     },
     {
@@ -65,6 +69,7 @@
       "evidence": [
         "image-filename"
       ],
+      "reason": "generated from local file evidence",
       "warnings": [
         "exiftool not available; image EXIF metadata skipped"
       ],
@@ -79,6 +84,7 @@
       "evidence": [
         "csv-headers"
       ],
+      "reason": "generated from local file evidence",
       "dry_run": true
     },
     {
@@ -90,6 +96,7 @@
       "evidence": [
         "json-structured"
       ],
+      "reason": "generated from local file evidence",
       "dry_run": true
     },
     {
@@ -101,6 +108,7 @@
       "evidence": [
         "markdown-heading"
       ],
+      "reason": "generated from local file evidence",
       "dry_run": true
     },
     {
@@ -112,6 +120,7 @@
       "evidence": [
         "musicxml-work-title"
       ],
+      "reason": "generated from local file evidence",
       "dry_run": true
     },
     {
@@ -119,10 +128,11 @@
       "destination_path": "files/output/some-things-only-actually-potentially.pdf",
       "suggested_name": "some-things-only-actually-potentially.pdf",
       "method": "metadata",
-      "confidence": 0.8300000000000001,
+      "confidence": 0.83,
       "evidence": [
         "pdf-first-text"
       ],
+      "reason": "generated from local file evidence",
       "dry_run": true
     },
     {
@@ -134,14 +144,16 @@
       "evidence": [
         "office-heading"
       ],
+      "reason": "generated from local file evidence",
       "dry_run": true
     },
     {
       "source_path": "files/input/text-files/f823939887.txt",
-      "destination_path": "files/output/text-files/unidentified-content.txt",
-      "suggested_name": "unidentified-content.txt",
+      "destination_path": "files/output/text-files/random-text-fragment.txt",
+      "suggested_name": "random-text-fragment.txt",
       "method": "metadata",
       "confidence": 0.1,
+      "reason": "no strong local evidence found",
       "dry_run": true,
       "skipped": true,
       "skip_reason": "confidence 0.10 below copy threshold 0.75",
@@ -152,24 +164,23 @@
       "destination_path": "files/output/text-files/hello-there-general-kenobi-roger.txt",
       "suggested_name": "hello-there-general-kenobi-roger.txt",
       "method": "metadata",
-      "confidence": 0.69,
+      "confidence": 0.77,
       "evidence": [
         "short-text-note"
       ],
-      "dry_run": true,
-      "skipped": true,
-      "skip_reason": "confidence 0.69 below copy threshold 0.75",
-      "review_status": "pending"
+      "reason": "generated from local file evidence",
+      "dry_run": true
     },
     {
       "source_path": "files/input/text-files/text001.txt",
       "destination_path": "files/output/text-files/thursday-sync-alex-moved-friday-10-30-am.txt",
       "suggested_name": "thursday-sync-alex-moved-friday-10-30-am.txt",
       "method": "metadata",
-      "confidence": 0.8300000000000001,
+      "confidence": 0.83,
       "evidence": [
         "text-summary"
       ],
+      "reason": "generated from local file evidence",
       "dry_run": true
     },
     {
@@ -177,10 +188,11 @@
       "destination_path": "files/output/text-files/april-2025-invoice-woodbridge-account.txt",
       "suggested_name": "april-2025-invoice-woodbridge-account.txt",
       "method": "metadata",
-      "confidence": 0.8300000000000001,
+      "confidence": 0.83,
       "evidence": [
         "text-summary"
       ],
+      "reason": "generated from local file evidence",
       "dry_run": true
     },
     {
@@ -188,10 +200,11 @@
       "destination_path": "files/output/text-files/let-me-not-marriage-true-minds.txt",
       "suggested_name": "let-me-not-marriage-true-minds.txt",
       "method": "metadata",
-      "confidence": 0.8300000000000001,
+      "confidence": 0.83,
       "evidence": [
         "text-summary"
       ],
+      "reason": "generated from local file evidence",
       "dry_run": true
     },
     {
@@ -203,6 +216,7 @@
       "evidence": [
         "text-summary"
       ],
+      "reason": "generated from local file evidence",
       "dry_run": true
     }
   ]

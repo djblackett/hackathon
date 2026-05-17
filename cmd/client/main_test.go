@@ -74,7 +74,7 @@ func TestClientDryRunReportRecoveredCorpus(t *testing.T) {
 	assertSuggestedName(t, bySource, "recovered-html", "basics-photosynthesis.html")
 	assertSuggestedName(t, bySource, "recovered-musicxml", "you-my-sunshine.musicxml")
 	assertSuggestedName(t, bySource, "recovered-xml.bin", "quarterly-safety-inspection-log.xml")
-	assertSuggestedName(t, bySource, "random.txt", "unidentified-content.txt")
+	assertSuggestedName(t, bySource, "random.txt", "random-text-fragment.txt")
 
 	if bySource["random.txt"].Confidence >= 0.4 {
 		t.Fatalf("random.txt confidence = %.2f, want low confidence", bySource["random.txt"].Confidence)
@@ -88,7 +88,7 @@ func TestClientDryRunReportRecoveredCorpus(t *testing.T) {
 		"file0007":           {Dest: "quiz-sport-q1-question-which-one-correct-team.json", Suggested: "quiz-sport-q1-question-which-one-correct-team.json", Method: "metadata", Evidence: "json-structured"},
 		"markdown-note":      {Dest: "incident-response-runbook.md", Suggested: "incident-response-runbook.md", Method: "metadata", Evidence: "markdown-heading"},
 		"message":            {Dest: "customer-onboarding-checklist.eml", Suggested: "customer-onboarding-checklist.eml", Method: "metadata", Evidence: "email-subject"},
-		"random.txt":         {Dest: "unidentified-content.txt", Suggested: "unidentified-content.txt", Method: "metadata"},
+		"random.txt":         {Dest: "random-text-fragment.txt", Suggested: "random-text-fragment.txt", Method: "metadata"},
 		"recovered-doc":      {Dest: "monumental-construction-panama-canal.docx", Suggested: "monumental-construction-panama-canal.docx", Method: "metadata", Evidence: "office-heading"},
 		"recovered-html":     {Dest: "basics-photosynthesis.html", Suggested: "basics-photosynthesis.html", Method: "metadata", Evidence: "html-title"},
 		"recovered-musicxml": {Dest: "you-my-sunshine.musicxml", Suggested: "you-my-sunshine.musicxml", Method: "metadata", Evidence: "musicxml-work-title"},
@@ -590,7 +590,7 @@ func TestClientDryRunReportInputCorpus(t *testing.T) {
 	if got.Summary.TotalFiles != 17 {
 		t.Fatalf("total files = %d, want 17", got.Summary.TotalFiles)
 	}
-	if got.Summary.PlannedCount != 15 || got.Summary.SkippedCount != 2 || got.Summary.PendingReviewCount != 2 {
+	if got.Summary.PlannedCount != 16 || got.Summary.SkippedCount != 1 || got.Summary.PendingReviewCount != 1 {
 		t.Fatalf("unexpected summary: %+v", got.Summary)
 	}
 
@@ -599,9 +599,9 @@ func TestClientDryRunReportInputCorpus(t *testing.T) {
 	assertSuggestedName(t, bySource, "cliffs.png", "cliffs.png")
 	assertSuggestedName(t, bySource, "sdfjgbfh4644623.docx", "monumental-construction-panama-canal.docx")
 	assertSuggestedName(t, bySource, "text.txt", "hello-there-general-kenobi-roger.txt")
-	assertSuggestedName(t, bySource, "f823939887.txt", "unidentified-content.txt")
-	if !bySource["text.txt"].Skipped {
-		t.Fatal("short note should stay pending review")
+	assertSuggestedName(t, bySource, "f823939887.txt", "random-text-fragment.txt")
+	if bySource["text.txt"].Skipped {
+		t.Fatal("short note should no longer need pending review")
 	}
 	if !bySource["f823939887.txt"].Skipped {
 		t.Fatal("random text should stay pending review")

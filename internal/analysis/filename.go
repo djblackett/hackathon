@@ -60,6 +60,9 @@ func GenerateFilename(info extractors.ExtractedFileInfo) FilenameSuggestion {
 		if metadataSource(sample.Source) {
 			confidence += 0.05
 		}
+		if sample.Source == "short-text-note" && len(words) >= 5 {
+			confidence += 0.08
+		}
 		if len(words) >= 3 {
 			confidence += 0.05
 		}
@@ -86,6 +89,8 @@ func GenerateFilename(info extractors.ExtractedFileInfo) FilenameSuggestion {
 
 func unidentifiedFallback(info extractors.ExtractedFileInfo) string {
 	switch info.DetectedType {
+	case "text":
+		return unidentifiedTextFallback(info.RawContent)
 	case "media":
 		return unidentifiedMediaFallback(info.SuggestedExtension)
 	case "image":
@@ -93,6 +98,17 @@ func unidentifiedFallback(info extractors.ExtractedFileInfo) string {
 	default:
 		return "unidentified-content"
 	}
+}
+
+func unidentifiedTextFallback(content string) string {
+	text := strings.TrimSpace(content)
+	if text == "" {
+		return "empty-text"
+	}
+	if looksRandom(text) {
+		return "random-text-fragment"
+	}
+	return "unclassified-text"
 }
 
 func unidentifiedMediaFallback(ext string) string {

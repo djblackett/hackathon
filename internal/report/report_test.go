@@ -15,8 +15,9 @@ func TestWriteReport(t *testing.T) {
 		DestinationPath: "output/a.txt",
 		SuggestedName:   "a.txt",
 		Method:          "metadata",
-		Confidence:      0.8,
+		Confidence:      0.8500000000000001,
 		Evidence:        []string{"markdown-heading"},
+		Reason:          "generated from local file evidence",
 		DryRun:          true,
 	}}
 
@@ -38,6 +39,12 @@ func TestWriteReport(t *testing.T) {
 	}
 	if got.Summary.TotalFiles != 1 || got.Summary.PlannedCount != 1 {
 		t.Fatalf("unexpected summary: %+v", got.Summary)
+	}
+	if got.Entries[0].Confidence != 0.85 {
+		t.Fatalf("confidence = %v, want rounded 0.85", got.Entries[0].Confidence)
+	}
+	if got.Entries[0].Reason != "generated from local file evidence" {
+		t.Fatalf("reason = %q", got.Entries[0].Reason)
 	}
 }
 
@@ -108,14 +115,26 @@ func TestBuildSummary(t *testing.T) {
 func TestWriteReviewMarkdown(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "review.md")
 	r := Report{
-		Entries: []Entry{{
-			SourcePath:      "files/input/random.txt",
-			DestinationPath: "files/output/unidentified-content.txt",
-			Confidence:      0.1,
-			Skipped:         true,
-			SkipReason:      "confidence 0.10 below copy threshold 0.75",
-			ReviewStatus:    "pending",
-		}},
+		Entries: []Entry{
+			{
+				SourcePath:      "files/input/random.txt",
+				DestinationPath: "files/output/random-text-fragment.txt",
+				Method:          "metadata",
+				Confidence:      0.1,
+				Reason:          "no strong local evidence found",
+				Skipped:         true,
+				SkipReason:      "confidence 0.10 below copy threshold 0.75",
+				ReviewStatus:    "pending",
+			},
+			{
+				SourcePath:      "files/input/note.md",
+				DestinationPath: "files/output/incidents.md",
+				Method:          "metadata",
+				Confidence:      0.9,
+				Evidence:        []string{"markdown-heading"},
+				Reason:          "generated from local file evidence",
+			},
+		},
 	}
 	r.Summary = BuildSummary(r.Entries)
 
@@ -127,7 +146,7 @@ func TestWriteReviewMarkdown(t *testing.T) {
 		t.Fatal(err)
 	}
 	got := string(data)
-	for _, want := range []string{"# File Rename Review", "pending", "files/input/random.txt", "review_status"} {
+	for _, want := range []string{"# File Rename Review", "pending", "planned", "files/input/random.txt", "files/input/note.md", "markdown-heading", "generated from local file evidence", "review_status"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("review markdown missing %q:\n%s", want, got)
 		}

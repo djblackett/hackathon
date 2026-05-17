@@ -3,6 +3,7 @@ package report
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"strings"
 )
@@ -14,6 +15,7 @@ type Entry struct {
 	Method          string   `json:"method"`
 	Confidence      float64  `json:"confidence"`
 	Evidence        []string `json:"evidence,omitempty"`
+	Reason          string   `json:"reason,omitempty"`
 	Warnings        []string `json:"warnings,omitempty"`
 	DryRun          bool     `json:"dry_run"`
 	Skipped         bool     `json:"skipped,omitempty"`
@@ -45,11 +47,25 @@ func Write(path string, entries []Entry) error {
 		return nil
 	}
 
+	entries = roundedEntries(entries)
 	data, err := json.MarshalIndent(Report{Summary: BuildSummary(entries), Entries: entries}, "", "  ")
 	if err != nil {
 		return err
 	}
 	return os.WriteFile(path, data, 0644)
+}
+
+func roundedEntries(entries []Entry) []Entry {
+	out := make([]Entry, len(entries))
+	for i, entry := range entries {
+		entry.Confidence = roundConfidence(entry.Confidence)
+		out[i] = entry
+	}
+	return out
+}
+
+func roundConfidence(value float64) float64 {
+	return math.Round(value*100) / 100
 }
 
 func BuildSummary(entries []Entry) Summary {
@@ -114,30 +130,46 @@ func WriteReviewMarkdown(path string, report Report) error {
 	fmt.Fprintf(&b, "- Accepted: %d\n", report.Summary.AcceptedCount)
 	fmt.Fprintf(&b, "- Rejected: %d\n\n", report.Summary.RejectedCount)
 	b.WriteString("To accept a skipped entry, edit the JSON report and set `review_status` to `accepted`. Then run `--apply-report report.json --include-skipped`.\n\n")
-	b.WriteString("| Status | Confidence | Source | Destination | Reason | Notes |\n")
-	b.WriteString("|---|---:|---|---|---|---|\n")
+	b.WriteString("| Status | Confidence | Method | Evidence | Source | Destination | Reason | Warnings | Notes |\n")
+	b.WriteString("|---|---:|---|---|---|---|---|---|---|\n")
 
 	for _, entry := range report.Entries {
-		if !entry.Skipped && entry.ReviewStatus == "" {
-			continue
-		}
-		status := entry.ReviewStatus
-		if status == "" && entry.Skipped {
-			status = "pending"
-		}
+		status := reviewDisplayStatus(entry)
 		fmt.Fprintf(
 			&b,
-			"| %s | %.2f | `%s` | `%s` | %s | %s |\n",
+			"| %s | %.2f | %s | %s | `%s` | `%s` | %s | %s | %s |\n",
 			escapeMarkdownTable(status),
 			entry.Confidence,
+			escapeMarkdownTable(entry.Method),
+			escapeMarkdownTable(strings.Join(entry.Evidence, ", ")),
 			escapeMarkdownCode(entry.SourcePath),
 			escapeMarkdownCode(entry.DestinationPath),
-			escapeMarkdownTable(entry.SkipReason),
+			escapeMarkdownTable(reviewReason(entry)),
+			escapeMarkdownTable(strings.Join(entry.Warnings, "; ")),
 			escapeMarkdownTable(entry.ReviewNote),
 		)
 	}
 
 	return os.WriteFile(path, []byte(b.String()), 0644)
+}
+
+func reviewDisplayStatus(entry Entry) string {
+	status := NormalizeReviewStatus(entry.ReviewStatus)
+	switch {
+	case entry.Skipped:
+		return status
+	case status == "accepted" || status == "rejected":
+		return status
+	default:
+		return "planned"
+	}
+}
+
+func reviewReason(entry Entry) string {
+	if entry.SkipReason != "" {
+		return entry.SkipReason
+	}
+	return entry.Reason
 }
 
 func NormalizeReviewStatus(status string) string {

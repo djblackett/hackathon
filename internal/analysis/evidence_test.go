@@ -185,6 +185,7 @@ func TestGenerateFilenameFromGenericXMLTitle(t *testing.T) {
 func TestGenerateFilenameRejectsRandomText(t *testing.T) {
 	info := extractors.ExtractedFileInfo{
 		DetectedType: "text",
+		RawContent:   "OeYV/jjq0pT9Jn4oiiJG UHmmYZszQjxHikWZF8lCoisYzBgiJEuZoRpmcYzMQ8RmMIivI5GYwhm44R8UvH42M2M5HhnoIOVa",
 		TextSamples: []extractors.TextSample{
 			{Source: "first-meaningful-line", Text: "OeYV/jjq0pT9Jn4oiiJG UHmmYZszQjxHikWZF8lCoisYzBgiJEuZoRpmcYzMQ8RmMIivI5GYwhm44R8UvH42M2M5HhnoIOVa", Score: 0.58},
 		},
@@ -192,8 +193,8 @@ func TestGenerateFilenameRejectsRandomText(t *testing.T) {
 
 	got := GenerateFilename(info)
 
-	if got.Filename != "unidentified-content" {
-		t.Fatalf("filename = %q, want unidentified-content", got.Filename)
+	if got.Filename != "random-text-fragment" {
+		t.Fatalf("filename = %q, want random-text-fragment", got.Filename)
 	}
 	if got.Confidence >= 0.4 {
 		t.Fatalf("confidence = %.2f, want low confidence", got.Confidence)
@@ -371,8 +372,8 @@ func TestGenerateFilenameUsesShortTextNoteAtMediumConfidence(t *testing.T) {
 	if got.Filename != "hello-there-general-kenobi-roger" {
 		t.Fatalf("filename = %q", got.Filename)
 	}
-	if got.Confidence >= 0.75 {
-		t.Fatalf("confidence = %.2f, want below automatic copy threshold", got.Confidence)
+	if got.Confidence < 0.75 {
+		t.Fatalf("confidence = %.2f, want copy-threshold friendly confidence", got.Confidence)
 	}
 }
 
