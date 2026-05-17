@@ -75,7 +75,7 @@ func GenerateFilename(info extractors.ExtractedFileInfo) FilenameSuggestion {
 			Confidence: confidence,
 			Method:     "metadata",
 			Evidence:   []string{sample.Source},
-			Reason:     "generated from local file evidence",
+			Reason:     "generated from local evidence source: " + sample.Source,
 		}
 	}
 

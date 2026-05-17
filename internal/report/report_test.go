@@ -17,7 +17,7 @@ func TestWriteReport(t *testing.T) {
 		Method:          "metadata",
 		Confidence:      0.8500000000000001,
 		Evidence:        []string{"markdown-heading"},
-		Reason:          "generated from local file evidence",
+		Reason:          "generated from local evidence source: markdown-heading",
 		DryRun:          true,
 	}}
 
@@ -43,7 +43,7 @@ func TestWriteReport(t *testing.T) {
 	if got.Entries[0].Confidence != 0.85 {
 		t.Fatalf("confidence = %v, want rounded 0.85", got.Entries[0].Confidence)
 	}
-	if got.Entries[0].Reason != "generated from local file evidence" {
+	if got.Entries[0].Reason != "generated from local evidence source: markdown-heading" {
 		t.Fatalf("reason = %q", got.Entries[0].Reason)
 	}
 }
@@ -132,7 +132,7 @@ func TestWriteReviewMarkdown(t *testing.T) {
 				Method:          "metadata",
 				Confidence:      0.9,
 				Evidence:        []string{"markdown-heading"},
-				Reason:          "generated from local file evidence",
+				Reason:          "generated from local evidence source: markdown-heading",
 			},
 		},
 	}
@@ -146,7 +146,7 @@ func TestWriteReviewMarkdown(t *testing.T) {
 		t.Fatal(err)
 	}
 	got := string(data)
-	for _, want := range []string{"# File Rename Review", "pending", "planned", "files/input/random.txt", "files/input/note.md", "markdown-heading", "generated from local file evidence", "review_status"} {
+	for _, want := range []string{"# File Rename Review", "pending", "planned", "files/input/random.txt", "files/input/note.md", "markdown-heading", "generated from local evidence source: markdown-heading", "review_status"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("review markdown missing %q:\n%s", want, got)
 		}
