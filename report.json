@@ -18,6 +18,7 @@
       "suggested_name": "video-2026-01-22-00-59-57.mkv",
       "method": "metadata",
       "confidence": 0.85,
+      "confidence_band": "high",
       "evidence": [
         "media-timestamp"
       ],
@@ -30,6 +31,7 @@
       "suggested_name": "basics-photosynthesis.html",
       "method": "metadata",
       "confidence": 0.95,
+      "confidence_band": "high",
       "evidence": [
         "html-title"
       ],
@@ -42,6 +44,7 @@
       "suggested_name": "retro-metro-mix-dec-28-01-start.wav",
       "method": "metadata",
       "confidence": 0.93,
+      "confidence_band": "high",
       "evidence": [
         "media-filename"
       ],
@@ -54,6 +57,7 @@
       "suggested_name": "alice.mp4",
       "method": "metadata",
       "confidence": 0.75,
+      "confidence_band": "medium",
       "evidence": [
         "media-filename"
       ],
@@ -66,6 +70,7 @@
       "suggested_name": "cliffs.png",
       "method": "metadata",
       "confidence": 0.75,
+      "confidence_band": "medium",
       "evidence": [
         "image-filename"
       ],
@@ -81,6 +86,7 @@
       "suggested_name": "customer-first-name-last-company-city-country-phone.csv",
       "method": "metadata",
       "confidence": 0.95,
+      "confidence_band": "high",
       "evidence": [
         "csv-headers"
       ],
@@ -93,6 +99,7 @@
       "suggested_name": "quiz-sport-q1-question-which-one-correct-team.json",
       "method": "metadata",
       "confidence": 0.95,
+      "confidence_band": "high",
       "evidence": [
         "json-structured"
       ],
@@ -105,6 +112,7 @@
       "suggested_name": "super-important-title.md",
       "method": "metadata",
       "confidence": 0.95,
+      "confidence_band": "high",
       "evidence": [
         "markdown-heading"
       ],
@@ -117,6 +125,7 @@
       "suggested_name": "you-my-sunshine.musicxml",
       "method": "metadata",
       "confidence": 0.95,
+      "confidence_band": "high",
       "evidence": [
         "musicxml-work-title"
       ],
@@ -129,6 +138,7 @@
       "suggested_name": "some-things-only-actually-potentially.pdf",
       "method": "metadata",
       "confidence": 0.83,
+      "confidence_band": "medium",
       "evidence": [
         "pdf-first-text"
       ],
@@ -141,6 +151,7 @@
       "suggested_name": "monumental-construction-panama-canal.docx",
       "method": "metadata",
       "confidence": 0.95,
+      "confidence_band": "high",
       "evidence": [
         "office-heading"
       ],
@@ -153,6 +164,7 @@
       "suggested_name": "random-text-fragment.txt",
       "method": "metadata",
       "confidence": 0.1,
+      "confidence_band": "low",
       "reason": "no strong local evidence found",
       "dry_run": true,
       "skipped": true,
@@ -165,6 +177,7 @@
       "suggested_name": "hello-there-general-kenobi-roger.txt",
       "method": "metadata",
       "confidence": 0.77,
+      "confidence_band": "medium",
       "evidence": [
         "short-text-note"
       ],
@@ -177,6 +190,7 @@
       "suggested_name": "thursday-sync-alex-moved-friday-10-30-am.txt",
       "method": "metadata",
       "confidence": 0.83,
+      "confidence_band": "medium",
       "evidence": [
         "text-summary"
       ],
@@ -189,6 +203,7 @@
       "suggested_name": "april-2025-invoice-woodbridge-account.txt",
       "method": "metadata",
       "confidence": 0.83,
+      "confidence_band": "medium",
       "evidence": [
         "text-summary"
       ],
@@ -201,6 +216,7 @@
       "suggested_name": "let-me-not-marriage-true-minds.txt",
       "method": "metadata",
       "confidence": 0.83,
+      "confidence_band": "medium",
       "evidence": [
         "text-summary"
       ],
@@ -213,6 +229,7 @@
       "suggested_name": "thinking-about-you.txt",
       "method": "metadata",
       "confidence": 0.8,
+      "confidence_band": "medium",
       "evidence": [
         "text-summary"
       ],

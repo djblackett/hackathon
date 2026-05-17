@@ -14,6 +14,7 @@ type Entry struct {
 	SuggestedName   string   `json:"suggested_name"`
 	Method          string   `json:"method"`
 	Confidence      float64  `json:"confidence"`
+	ConfidenceBand  string   `json:"confidence_band,omitempty"`
 	Evidence        []string `json:"evidence,omitempty"`
 	Reason          string   `json:"reason,omitempty"`
 	Warnings        []string `json:"warnings,omitempty"`
@@ -59,6 +60,9 @@ func roundedEntries(entries []Entry) []Entry {
 	out := make([]Entry, len(entries))
 	for i, entry := range entries {
 		entry.Confidence = roundConfidence(entry.Confidence)
+		if strings.TrimSpace(entry.ConfidenceBand) == "" {
+			entry.ConfidenceBand = ConfidenceBand(entry.Confidence)
+		}
 		out[i] = entry
 	}
 	return out
@@ -66,6 +70,19 @@ func roundedEntries(entries []Entry) []Entry {
 
 func roundConfidence(value float64) float64 {
 	return math.Round(value*100) / 100
+}
+
+func ConfidenceBand(confidence float64) string {
+	switch {
+	case confidence >= 0.85:
+		return "high"
+	case confidence >= 0.75:
+		return "medium"
+	case confidence >= 0.4:
+		return "review"
+	default:
+		return "low"
+	}
 }
 
 func BuildSummary(entries []Entry) Summary {
@@ -130,16 +147,17 @@ func WriteReviewMarkdown(path string, report Report) error {
 	fmt.Fprintf(&b, "- Accepted: %d\n", report.Summary.AcceptedCount)
 	fmt.Fprintf(&b, "- Rejected: %d\n\n", report.Summary.RejectedCount)
 	b.WriteString("To accept a skipped entry, edit the JSON report and set `review_status` to `accepted`. Then run `--apply-report report.json --include-skipped`.\n\n")
-	b.WriteString("| Status | Confidence | Method | Evidence | Source | Destination | Reason | Warnings | Notes |\n")
-	b.WriteString("|---|---:|---|---|---|---|---|---|---|\n")
+	b.WriteString("| Status | Confidence | Band | Method | Evidence | Source | Destination | Reason | Warnings | Notes |\n")
+	b.WriteString("|---|---:|---|---|---|---|---|---|---|---|\n")
 
 	for _, entry := range report.Entries {
 		status := reviewDisplayStatus(entry)
 		fmt.Fprintf(
 			&b,
-			"| %s | %.2f | %s | %s | `%s` | `%s` | %s | %s | %s |\n",
+			"| %s | %.2f | %s | %s | %s | `%s` | `%s` | %s | %s | %s |\n",
 			escapeMarkdownTable(status),
 			entry.Confidence,
+			escapeMarkdownTable(confidenceBandForReview(entry)),
 			escapeMarkdownTable(entry.Method),
 			escapeMarkdownTable(strings.Join(entry.Evidence, ", ")),
 			escapeMarkdownCode(entry.SourcePath),
@@ -151,6 +169,13 @@ func WriteReviewMarkdown(path string, report Report) error {
 	}
 
 	return os.WriteFile(path, []byte(b.String()), 0644)
+}
+
+func confidenceBandForReview(entry Entry) string {
+	if strings.TrimSpace(entry.ConfidenceBand) != "" {
+		return entry.ConfidenceBand
+	}
+	return ConfidenceBand(entry.Confidence)
 }
 
 func reviewDisplayStatus(entry Entry) string {

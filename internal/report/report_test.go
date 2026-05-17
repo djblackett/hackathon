@@ -43,6 +43,9 @@ func TestWriteReport(t *testing.T) {
 	if got.Entries[0].Confidence != 0.85 {
 		t.Fatalf("confidence = %v, want rounded 0.85", got.Entries[0].Confidence)
 	}
+	if got.Entries[0].ConfidenceBand != "high" {
+		t.Fatalf("confidence band = %q, want high", got.Entries[0].ConfidenceBand)
+	}
 	if got.Entries[0].Reason != "generated from local evidence source: markdown-heading" {
 		t.Fatalf("reason = %q", got.Entries[0].Reason)
 	}
@@ -146,9 +149,26 @@ func TestWriteReviewMarkdown(t *testing.T) {
 		t.Fatal(err)
 	}
 	got := string(data)
-	for _, want := range []string{"# File Rename Review", "pending", "planned", "files/input/random.txt", "files/input/note.md", "markdown-heading", "generated from local evidence source: markdown-heading", "review_status"} {
+	for _, want := range []string{"# File Rename Review", "pending", "planned", "low", "high", "files/input/random.txt", "files/input/note.md", "markdown-heading", "generated from local evidence source: markdown-heading", "review_status"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("review markdown missing %q:\n%s", want, got)
+		}
+	}
+}
+
+func TestConfidenceBand(t *testing.T) {
+	cases := map[float64]string{
+		0.95: "high",
+		0.85: "high",
+		0.84: "medium",
+		0.75: "medium",
+		0.74: "review",
+		0.4:  "review",
+		0.39: "low",
+	}
+	for in, want := range cases {
+		if got := ConfidenceBand(in); got != want {
+			t.Fatalf("ConfidenceBand(%v) = %q, want %q", in, got, want)
 		}
 	}
 }
