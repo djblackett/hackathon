@@ -15,12 +15,16 @@ func TestScanAcceptsFlagsAfterDirectory(t *testing.T) {
 		t.Fatal(err)
 	}
 	out := filepath.Join(t.TempDir(), "plan.json")
+	reviewOut := filepath.Join(t.TempDir(), "review.md")
 
-	if err := runApp([]string{"recovername", "scan", root, "--out", out, "--no-timestamp"}); err != nil {
+	if err := runApp([]string{"recovername", "scan", root, "--out", out, "--review-out", reviewOut, "--no-timestamp"}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(out); err != nil {
 		t.Fatalf("expected plan at trailing --out path: %v", err)
+	}
+	if _, err := os.Stat(reviewOut); err != nil {
+		t.Fatalf("expected review at trailing --review-out path: %v", err)
 	}
 }
 

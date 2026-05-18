@@ -110,20 +110,30 @@ For the fastest path, put files in `files/input/` and run the client:
 cp /path/to/your/files/* files/input/
 
 # Run metadata-only first. This does not call AI.
-go run ./cmd/client/main.go --strategy metadata-only --report report.json
+go run ./cmd/client/main.go \
+  --strategy metadata-only \
+  --dry-run \
+  --min-confidence-to-copy 0.75 \
+  --report report.json \
+  --review-report review.md
 
-# Renamed files will appear in files/output/
+# Inspect review.md, then remove --dry-run or apply the reviewed report.
 ```
+
+`report.json` is the machine-readable audit trail. `review.md` is the human-readable checklist with confidence bands, evidence sources, reasons, warnings, and notes.
 
 ### Recovername v0.1 Preview
 
-The newer scan-only workflow is available as `recovername`. It is designed for recovered files where the original names, extensions, or metadata may be unreliable. This command writes a reviewable JSON plan and does not copy, rename, or delete files.
+The newer scan-only workflow is available as `recovername`. It is designed for recovered files where the original names, extensions, or metadata may be unreliable. This command writes a reviewable JSON plan and optional Markdown review, and does not copy, rename, or delete files.
 
 ```bash
 go run ./cmd/recovername scan ./testdata/recovered \
   --out rename-plan.json \
+  --review-out rename-review.md \
   --no-timestamp
 ```
+
+Use `cmd/client` when you want to copy files into `files/output/`, apply a reviewed report, or use AI fallback. Use `recovername scan` when you want the safer recovered-files workflow: scan first, inspect the plan, then decide how to apply it.
 
 Optional Tika evidence can be added without making Tika mandatory:
 
@@ -190,6 +200,33 @@ go run ./cmd/recovername scan ./recovered \
 ```
 
 OCR is disabled by default and is treated as cautious evidence because recognized text can be noisy. Missing or failing Tesseract is recorded per file and does not stop the batch.
+
+### Optional Tool Setup
+
+The app works without external metadata tools, but recovered media, image, and scanned-document batches improve when these are installed:
+
+| Tool | Used For | Enables | Typical package |
+|------|----------|---------|-----------------|
+| Apache Tika | Broad document text and metadata fallback | `--tika-url` / `TIKA_URL` | Docker sidecar |
+| ExifTool | Image and media embedded metadata | image titles, camera timestamps, GPS dates | `exiftool` / `libimage-exiftool-perl` |
+| ffprobe | Audio/video technical metadata and tags | media duration, codecs, title/date tags | `ffmpeg` |
+| Siegfried | Format identification for recovered files | PRONOM-style format IDs | `siegfried` / `sf` |
+| JHOVE | Preservation validation | validation status and warnings | `jhove` |
+| Tesseract | OCR for image-like files | cautious text evidence from scans | `tesseract-ocr` |
+
+On Debian/Ubuntu-style systems, the common local tools are usually:
+
+```bash
+sudo apt-get install libimage-exiftool-perl ffmpeg tesseract-ocr
+```
+
+On macOS with Homebrew:
+
+```bash
+brew install exiftool ffmpeg tesseract siegfried
+```
+
+Warnings such as `exiftool not available; image EXIF metadata skipped` mean the scan continued safely, but that evidence source was unavailable. Install the relevant tool or omit that optional flag if the warning is expected.
 
 ### 2. Choose Your Backend
 
@@ -265,7 +302,7 @@ When running the client through the default Docker Compose file, `TIKA_URL=http:
 | `--review-note` | Review note update in `source=note` form; repeatable | none |
 | `--explain` | Explain the metadata filename suggestion for one file | none |
 | `--include-skipped` | When applying a report, also copy skipped entries marked `review_status=accepted` | `false` |
-| `--review-report` | Write a Markdown review file for skipped or reviewed report entries | none |
+| `--review-report` | Write a Markdown review file for all report entries | none |
 | `--tika-url` | Optional Apache Tika server URL for fallback extraction | `TIKA_URL` |
 | `--disable-tika` | Disable Apache Tika fallback even when `TIKA_URL` is set | `false` |
 
@@ -302,7 +339,7 @@ When running the client through the default Docker Compose file, `TIKA_URL=http:
 # Copy only confident local matches; weak matches stay in the report as skipped
 ./ai-renamer --input ./recovered --strategy metadata-only --min-confidence-to-copy 0.75 --report report.json
 
-# Generate a Markdown review file for skipped entries
+# Generate a Markdown review file for all entries
 ./ai-renamer --input ./recovered --strategy metadata-only --min-confidence-to-copy 0.75 --report report.json --review-report review.md
 
 # Print pending review entries from a report
@@ -398,6 +435,19 @@ go run ./cmd/client/main.go --input ./files/input --strategy metadata-only --dry
 
 This mode does not call OpenAI, Ollama, or the remote server.
 
+## Confidence and Review
+
+Reports include both numeric confidence and a scan-friendly confidence band:
+
+| Band | Numeric Range | Meaning |
+|------|---------------|---------|
+| `high` | `>= 0.85` | Strong local metadata or content evidence. |
+| `medium` | `>= 0.75` and `< 0.85` | Good enough for the default confident-copy threshold. |
+| `review` | `>= 0.40` and `< 0.75` | Plausible but should be checked before copying. |
+| `low` | `< 0.40` | Weak, random, missing, or damaged evidence. |
+
+The default examples use `--min-confidence-to-copy 0.75`, which means `high` and `medium` entries are planned while `review` and `low` entries stay pending unless accepted later.
+
 ## Deployment
 
 ### Server Deployment
@@ -428,6 +478,8 @@ This project includes comprehensive DevOps configurations:
 - [x] Wrong-extension file detection
 - [x] JSON, CSV, HTML, XML, MusicXML, Office, email, image metadata, and media metadata extraction
 - [x] Dry-run JSON reports and report application
+- [x] Markdown review reports for client reports and recovername plans
+- [x] Confidence bands and source-specific report reasons
 - [x] Collision-safe non-destructive copying
 - [x] HTTP API server
 - [x] Fly.io deployment
@@ -435,7 +487,7 @@ This project includes comprehensive DevOps configurations:
 
 ### Planned Enhancements
 
-- [ ] OCR for scanned documents
+- [ ] Broader OCR coverage for scanned PDFs
 - [ ] Whisper integration for parsing voice recordings
 - [ ] Electron desktop app
 - [ ] Batch API endpoints

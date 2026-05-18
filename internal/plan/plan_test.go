@@ -1,6 +1,9 @@
 package plan
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -28,6 +31,34 @@ func TestBuildResolvesDuplicateSuggestedNamesDeterministically(t *testing.T) {
 	}
 	if got.Items[1].Conflict == nil || got.Items[2].Conflict == nil {
 		t.Fatalf("duplicate items should include conflict metadata: %+v", got.Items)
+	}
+}
+
+func TestWriteReviewMarkdown(t *testing.T) {
+	p := Build("recovered", []evidence.FileEvidence{
+		testEvidence("recovered/a", "Statement April"),
+		{
+			Path:         "recovered/random.txt",
+			DetectedMIME: "text/plain",
+			Extension:    ".txt",
+			Sources:      []evidence.EvidenceSource{evidence.SourceNativeMIME},
+			Warnings:     []string{"low signal"},
+		},
+	}, zeroTime())
+	out := filepath.Join(t.TempDir(), "review.md")
+
+	if err := WriteReviewMarkdown(out, p); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := string(data)
+	for _, want := range []string{"# Rename Plan Review", "Medium confidence: 1", "Low confidence: 1", "statement-april.pdf", "low signal"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("review markdown missing %q:\n%s", want, got)
+		}
 	}
 }
 

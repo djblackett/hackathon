@@ -12,6 +12,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/djblackett/bootdev-hackathon/internal/app"
+	"github.com/djblackett/bootdev-hackathon/internal/plan"
 )
 
 func main() {
@@ -34,6 +35,10 @@ func runApp(args []string) error {
 						Name:  "out",
 						Value: "rename-plan.json",
 						Usage: "path to write the JSON rename plan",
+					},
+					&cli.StringFlag{
+						Name:  "review-out",
+						Usage: "optional path to write a Markdown review of the rename plan",
 					},
 					&cli.StringFlag{
 						Name:  "tika-url",
@@ -144,16 +149,39 @@ func runApp(args []string) error {
 						MaxTextPreview:   c.Int("max-text-preview"),
 						NoTimestamp:      c.Bool("no-timestamp"),
 					}
-					if err := applyTrailingScanFlags(c.Args().Slice()[1:], &cfg); err != nil {
+					trailingArgs := c.Args().Slice()[1:]
+					reviewOut := c.String("review-out")
+					if trailingReviewOut := trailingStringFlag(trailingArgs, "review-out"); trailingReviewOut != "" {
+						reviewOut = trailingReviewOut
+					}
+					if err := applyTrailingScanFlags(trailingArgs, &cfg); err != nil {
 						return err
 					}
-					_, err := app.Scan(context.Background(), cfg)
-					return err
+					p, err := app.Scan(context.Background(), cfg)
+					if err != nil {
+						return err
+					}
+					return plan.WriteReviewMarkdown(reviewOut, p)
 				},
 			},
 		},
 	}
 	return cliApp.Run(args)
+}
+
+func trailingStringFlag(args []string, name string) string {
+	flag := "--" + name
+	prefix := flag + "="
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		switch {
+		case arg == flag && i+1 < len(args):
+			return args[i+1]
+		case strings.HasPrefix(arg, prefix):
+			return strings.TrimPrefix(arg, prefix)
+		}
+	}
+	return ""
 }
 
 func applyTrailingScanFlags(args []string, cfg *app.ScanConfig) error {
@@ -168,6 +196,12 @@ func applyTrailingScanFlags(args []string, cfg *app.ScanConfig) error {
 			cfg.OutPath = args[i]
 		case strings.HasPrefix(arg, "--out="):
 			cfg.OutPath = strings.TrimPrefix(arg, "--out=")
+		case arg == "--review-out":
+			i++
+			if i >= len(args) {
+				return fmt.Errorf("--review-out requires a value")
+			}
+		case strings.HasPrefix(arg, "--review-out="):
 		case arg == "--tika-url":
 			i++
 			if i >= len(args) {

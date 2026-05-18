@@ -81,6 +81,60 @@ func Write(path string, p Plan) error {
 	return os.WriteFile(path, data, 0644)
 }
 
+func WriteReviewMarkdown(path string, p Plan) error {
+	if path == "" {
+		return nil
+	}
+
+	var b strings.Builder
+	b.WriteString("# Rename Plan Review\n\n")
+	fmt.Fprintf(&b, "- Root: `%s`\n", escapeMarkdownCode(p.Root))
+	fmt.Fprintf(&b, "- Total files: %d\n", len(p.Items))
+	fmt.Fprintf(&b, "- High confidence: %d\n", countPlanConfidence(p, naming.ConfidenceHigh))
+	fmt.Fprintf(&b, "- Medium confidence: %d\n", countPlanConfidence(p, naming.ConfidenceMedium))
+	fmt.Fprintf(&b, "- Low confidence: %d\n", countPlanConfidence(p, naming.ConfidenceLow))
+	fmt.Fprintf(&b, "- No confidence: %d\n", countPlanConfidence(p, naming.ConfidenceNone))
+	fmt.Fprintf(&b, "- Warnings: %d\n\n", countPlanWarnings(p))
+	b.WriteString("Review low-confidence rows and any rows with warnings before applying or scripting changes from this plan.\n\n")
+	b.WriteString("| Confidence | Score | Old Path | Suggested Path | Reasons | Warnings |\n")
+	b.WriteString("|---|---:|---|---|---|---|\n")
+
+	for _, item := range p.Items {
+		fmt.Fprintf(
+			&b,
+			"| %s | %.2f | `%s` | `%s` | %s | %s |\n",
+			escapeMarkdownTable(string(item.Confidence)),
+			item.Score,
+			escapeMarkdownCode(item.OldPath),
+			escapeMarkdownCode(item.SuggestedPath),
+			escapeMarkdownTable(strings.Join(item.Reasons, "; ")),
+			escapeMarkdownTable(strings.Join(item.Warnings, "; ")),
+		)
+	}
+
+	return os.WriteFile(path, []byte(b.String()), 0644)
+}
+
+func countPlanConfidence(p Plan, confidence naming.Confidence) int {
+	count := 0
+	for _, item := range p.Items {
+		if item.Confidence == confidence {
+			count++
+		}
+	}
+	return count
+}
+
+func countPlanWarnings(p Plan) int {
+	count := 0
+	for _, item := range p.Items {
+		if len(item.Warnings) > 0 {
+			count++
+		}
+	}
+	return count
+}
+
 func reserveSuggestedPath(oldPath, suggested string, reserved map[string]struct{}) (string, *ConflictResolution) {
 	if pathAvailable(oldPath, suggested, reserved) {
 		reserved[suggested] = struct{}{}
@@ -119,4 +173,14 @@ func sameCleanPath(a, b string) bool {
 
 func leftPad3(value int) string {
 	return fmt.Sprintf("%03d", value)
+}
+
+func escapeMarkdownTable(s string) string {
+	s = strings.ReplaceAll(s, "|", "\\|")
+	s = strings.ReplaceAll(s, "\n", " ")
+	return s
+}
+
+func escapeMarkdownCode(s string) string {
+	return strings.ReplaceAll(s, "`", "'")
 }
